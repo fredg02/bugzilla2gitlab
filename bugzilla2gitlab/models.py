@@ -167,11 +167,12 @@ class Issue:
                 format_datetime(fields["delta_ts"], CONF.datetime_format_string),
             )
 
-        self.description += markdown_table_row("Version", fields.get("version"))
-        self.description += markdown_table_row("OS", fields.get("op_sys"))
-        self.description += markdown_table_row(
-            "Architecture", fields.get("rep_platform")
-        )
+        if CONF.include_version:
+            self.description += markdown_table_row("Version", fields.get("version"))
+        if CONF.include_os:
+            self.description += markdown_table_row("OS", fields.get("op_sys"))
+        if CONF.include_arch:
+            self.description += markdown_table_row("Architecture", fields.get("rep_platform"))
 
         deplist = ""
         blocklist = ""

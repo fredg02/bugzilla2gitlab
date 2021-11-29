@@ -62,6 +62,15 @@ default_gitlab_labels:
 # Include a link to the original bugzilla bug in the GitLab issue description
 include_bugzilla_link: true
 
+# Include version in the GitLab issue description
+include_version: true
+
+# Include OS in the GitLab issue description
+include_os: true
+
+# Include architecture in the GitLab issue description
+include_arch: true
+
 # Set to true to map bugzilla operating system to GitLab
 map_operating_system: false
 
