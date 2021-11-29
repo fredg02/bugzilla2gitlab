@@ -225,6 +225,10 @@ class Issue:
 
             self.description += ext_description
 
+        if CONF.dry_run:
+            print (self.description)
+            print ("\n")
+
     def update_attachments(self, reporter, comment, attachments):
         """
         Fetches attachments from comment if authored by reporter.
@@ -327,6 +331,11 @@ class Comment:
             self.body += attachment_markdown
         else:
             self.body += fields["thetext"]
+
+        if CONF.dry_run:
+            print ("<--Comment start-->")
+            print (self.body)
+            print ("<--Comment end-->\n")
 
     def validate(self):
         for field in self.required_fields:
