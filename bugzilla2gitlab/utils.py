@@ -59,7 +59,7 @@ def markdown_table_row(key, value):
 
 def format_datetime(datestr, formatting):
     """
-    Apply a dateime format to a string, according to the formatting string.
+    Apply a datetime format to a string, according to the formatting string.
     """
     parsed_dt = dateutil.parser.parse(datestr)
     return parsed_dt.strftime(formatting)
@@ -67,7 +67,7 @@ def format_datetime(datestr, formatting):
 
 def format_utc(datestr):
     """
-    Convert dateime string to UTC format recognized by gitlab.
+    Convert datetime string to UTC format recognized by GitLab.
     """
     parsed_dt = dateutil.parser.parse(datestr)
     utc_dt = parsed_dt.astimezone(pytz.utc)
@@ -115,7 +115,7 @@ def _fetch_bug_content(url, bug_id):
 
 def bugzilla_login(url, user, password):
     """
-    Log in to Bugzilla as user, asking for password for a few times / untill success.
+    Log in to Bugzilla as user, asking for password for a few times / until success.
     """
     max_login_attempts = 3
     login_url = "{}/index.cgi".format(url)
@@ -154,7 +154,7 @@ def validate_list(integer_list):
 
     if not isinstance(integer_list, list):
         raise Exception(
-            "Expected a list of integers. Instead recieved "
+            "Expected a list of integers. Instead received "
             "a(n) {}".format(type(integer_list))
         )
 

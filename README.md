@@ -12,7 +12,7 @@
 
 ## Introduction
 
-This is a tool for developers or admins who want to migrate the issue management for their software project from Bugzilla to Gitlab Issues. Here is a screenshoot of an issue created by bugzilla2gitlab:
+This is a tool for developers or admins who want to migrate the issue management for their software project from Bugzilla to GitLab Issues. Here is a screenshot of an issue created by bugzilla2gitlab:
 ![bugzilla2gitlab created issue](snapshot.png)
 
 bugzilla2gitlab copies over bugs, bug comments and attachments.
@@ -21,7 +21,7 @@ bugzilla2gitlab copies over bugs, bug comments and attachments.
 
 This library is very much under development. That said, if you like to feel the wind in your hair, simply `pip install bugzilla2gitlab`.
 
-More than likely, you will need to roll up your sleaves and hack on the package to achieve a migration that you are happy with. In this case:
+More than likely, you will need to roll up your sleeves and hack on the package to achieve a migration that you are happy with. In this case:
 
 ```
 git clone git@github.com:xmunoz/bugzilla2gitlab.git
@@ -33,7 +33,7 @@ pip install -r requirements.txt
 pip install .
 ```
 
-bugzilla2gitlab is compatible with python 3.6, 3.7, 3.8, and 3.9.
+bugzilla2gitlab is compatible with Python 3.6, 3.7, 3.8, and 3.9.
 
 ## Usage
 
@@ -71,11 +71,11 @@ To begin using bugzilla2gitlab, the following list of configuration files is req
 
 - `defaults.yml`: Core default values used throughout the modules.
 - `user_mappings.yml`: key, value pairs of Bugzilla usernames to GitLab users
-- `component_mappings.yml`: key, value pairs of Bugzilla components to Gitlab labels
+- `component_mappings.yml`: key, value pairs of Bugzilla components to GitLab labels
 
 Samples of all of these files with documentation for each configuration variable can be found in [tests/test_data/config](tests/test_data/config).
 
-bugzilla2gitlab creates issues and comments in GitLab with the user accounts specified in `user_mappings.yml`, perserving the integrity of the original Bugzilla commenter. This, however, may not always be possible. In [tests/test_data/config/user_mappings.yml](tests/test_data/config/user_mappings.yml), users with the designation "bugzilla" may have left the organization and therefore not have current GitLab accounts, or might simply be machine users. Comments for such users will be left under a generic "bugzilla" account. bugzilla2gitlab doesn't create any new user accounts. All of the accounts specified in `user_mappings.yml` must already exist in your GitLab installation.
+bugzilla2gitlab creates issues and comments in GitLab with the user accounts specified in `user_mappings.yml`, preserving the integrity of the original Bugzilla commenter. This, however, may not always be possible. In [tests/test_data/config/user_mappings.yml](tests/test_data/config/user_mappings.yml), users with the designation "bugzilla" may have left the organization and therefore not have current GitLab accounts, or might simply be machine users. Comments for such users will be left under a generic "bugzilla" account. bugzilla2gitlab doesn't create any new user accounts. All of the accounts specified in `user_mappings.yml` must already exist in your GitLab installation.
 
 The default table created in the issue description by bugzilla2gitlab looks like this:
 
@@ -95,7 +95,7 @@ To modify this table, take a look at `create_description` in [models.py](/bugzil
 
 ### GitLab
 
-Gitlab has a comprehensive and extensively documented API. Here are the main endpoints that this library makes use of.
+GitLab has a comprehensive and extensively documented API. Here are the main endpoints that this library makes use of.
 
 - [Creating new issues](http://doc.gitlab.com/ce/api/issues.html#new-issue)
 - [Adding comments to issues](http://doc.gitlab.com/ce/api/notes.html)
@@ -103,17 +103,17 @@ Gitlab has a comprehensive and extensively documented API. Here are the main end
 - [Changing an issue status](http://doc.gitlab.com/ce/api/issues.html#edit-issue)
 - [Getting user ids](http://doc.gitlab.com/ce/api/users.html#for-admins)
 
-Calls to the Gitlab API must be made with an administrator private token in order to [impersonate other users](http://doc.gitlab.com/ce/api/#sudo).
+Calls to the GitLab API must be made with an administrator private token in order to [impersonate other users](http://doc.gitlab.com/ce/api/#sudo).
 
 ### Bugzilla
 
-This program relies on being able to fetch bug data by simply appending `&ctype=xml` to the end of the bugzilla bug url, and then parsing the resultant xml. If this trick doesn't work on your bugzilla installation, then bugzilla2gitlab probably won't work for you.
+This program relies on being able to fetch bug data by simply appending `&ctype=xml` to the end of the bugzilla bug URL, and then parsing the resulting XML. If this trick doesn't work on your bugzilla installation, then bugzilla2gitlab probably won't work for you.
 
 ## Caveats
 
-Every comment or mention in GitLab typically sends a notification. This is true even for comments/issues created programatically. To avoid users inboxes being flooded with meaningless email notifications and avoid overwhelming your SMTP servers, GitLab users should disable all email notifications (global and group-specific) just prior to the running of this script. This can be done through the [Gitlab UI](https://gitlab.com/profile/notifications).
+Every comment or mention in GitLab typically sends a notification. This is true even for comments/issues created programmatically. To avoid users inboxes being flooded with meaningless email notifications and avoid overwhelming your SMTP servers, GitLab users should disable all email notifications (global and group-specific) just prior to the running of this script. This can be done through the [GitLab UI](https://gitlab.com/profile/notifications).
 
-Further, this tools requires Gitlab [sudo](https://docs.gitlab.com/ce/api/#sudo). If you need a tool that works without sudo, take a look at [FreeDesktop's migration tool](https://gitlab.freedesktop.org/freedesktop/bztogl).
+Further, this tools requires GitLab [sudo](https://docs.gitlab.com/ce/api/#sudo). If you need a tool that works without sudo, take a look at [FreeDesktop's migration tool](https://gitlab.freedesktop.org/freedesktop/bztogl).
 
 ## Demo
 
