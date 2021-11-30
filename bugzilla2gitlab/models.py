@@ -311,6 +311,17 @@ class Comment:
         validate_user(bugzilla_fields["who"])
         self.load_fields(bugzilla_fields)
 
+    def create_link(self, match_obj):
+       if match_obj.group(1) is not None and match_obj.group(2) is not None:
+          bug_id = match_obj.group(2)
+          link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, bug_id)
+          return "[{} {}]({})".format(match_obj.group(1), bug_id, link)
+
+    def find_bug_links(self, text):
+        # replace '[b|B]ug 12345' with markdown link
+        text = re.sub(r"([b|B]ug)\s(\d{1,6})", self.create_link, text)
+        return text
+
     def load_fields(self, fields):
         self.sudo = CONF.gitlab_users[CONF.bugzilla_users[fields["who"]]]
         # if unable to comment as the original user, put username in comment body
@@ -333,7 +344,7 @@ class Comment:
             attachment_markdown = Attachment(fields["attachid"], filename).save()
             self.body += attachment_markdown
         else:
-            self.body += fields["thetext"]
+            self.body += self.find_bug_links(fields["thetext"])
 
         if CONF.dry_run:
             print ("<--Comment start-->")
