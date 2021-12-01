@@ -1,6 +1,7 @@
 import re
 
-from .utils import _perform_request, format_datetime, format_utc, markdown_table_row
+from .utils import _perform_request, format_datetime, format_utc, markdown_table_row, add_user_mapping
+from .config import _get_user_id
 
 CONF = None
 
@@ -456,10 +457,41 @@ class Attachment:
 
         return u"[{}]({})".format(self.file_description, upload_link)
 
+#TODO: move method to utils.py? => CONF is not defined in utils.py
+def _get_gitlab_user_by_email(email):
+    url = "{}/users?search={}".format(CONF.gitlab_base_url, email)
+    response = _perform_request(url, "get", json=True, headers=CONF.default_headers)
+    if len(response) > 1:
+        #list all usernames
+        userslist = ""
+        for user in response:
+          userslist += "{} ".format(user["username"])
+        #TODO: raising exceptions wont allow batch mode
+        raise Exception("Found more than one GitLab user for email {}: {}. Please add the right user manually.".format(email, userslist))
+    elif len(response) == 0:
+      # if no GitLab user is found, return the misc user
+      # TODO: fix this more elegantly
+      return CONF.gitlab_misc_user
+    else:
+      return response[0]["username"]
 
 def validate_user(bugzilla_user):
+    print ("Validating username {}...".format(bugzilla_user))
     if bugzilla_user not in CONF.bugzilla_users:
-        raise Exception(
-            "Bugzilla user `{}` not found in user_mappings.yml. "
-            "Please add them before continuing.".format(bugzilla_user)
-        )
+        gitlab_user = _get_gitlab_user_by_email(bugzilla_user)
+
+        if gitlab_user is not None:
+            print("Found GitLab user {} for Bugzilla user {}".format(gitlab_user, bugzilla_user))
+            # add user to user_mappings.yml
+            user_mappings_file = "{}/user_mappings.yml".format(CONF.config_path)
+            add_user_mapping(user_mappings_file, bugzilla_user, gitlab_user)
+
+            # update user mapping in memory
+            CONF.bugzilla_users[bugzilla_user] = gitlab_user
+            uid = _get_user_id(gitlab_user, CONF.gitlab_base_url, CONF.default_headers, verify=CONF.verify)
+            CONF.gitlab_users[gitlab_user] = str(uid)
+        else:
+            raise Exception(
+                "No matching GitLab user found for Bugzilla user `{}` "
+                "Please add them before continuing.".format(bugzilla_user)
+            )

@@ -166,3 +166,9 @@ def validate_list(integer_list):
                 "{} is not able to be parsed as an integer, "
                 "and is therefore an invalid bug id.".format(i)
             ) from ValueError
+
+def add_user_mapping(file, bugzilla_user, gitlab_user):
+    #TODO: create file, if it does not exist yet?
+    user_mappings_file = open(file, "a")
+    user_mappings_file.write("{}: {}\n".format(bugzilla_user, gitlab_user))
+    user_mappings_file.close()

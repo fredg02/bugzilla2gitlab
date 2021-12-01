@@ -36,6 +36,7 @@ Config = namedtuple(
         "include_arch",
         "use_bugzilla_id",
         "verify",
+        "config_path",
     ],
 )
 
@@ -61,6 +62,11 @@ def get_config(path):
             )
         )
     configuration.update(_load_component_mappings(path))
+    
+    temp = {}
+    temp["config_path"] = path
+    configuration.update(temp)
+    
     return Config(**configuration)
 
 
@@ -84,14 +90,24 @@ def _load_user_id_cache(path, gitlab_url, gitlab_headers, verify):
     Load cache of GitLab usernames and ids
     """
     print("Loading user cache...")
-    with open(os.path.join(path, "user_mappings.yml")) as f:
+    user_mappings_file = os.path.join(path, "user_mappings.yml") 
+
+    # Create new file if it does not exist yet
+    if not os.path.exists(user_mappings_file):
+        with open(user_mappings_file, 'w') as fp:
+            fp.write('---\n')
+
+    with open(user_mappings_file) as f:
         bugzilla_mapping = yaml.safe_load(f)
 
     gitlab_users = {}
-    for user in bugzilla_mapping:
-        gitlab_username = bugzilla_mapping[user]
-        uid = _get_user_id(gitlab_username, gitlab_url, gitlab_headers, verify=verify)
-        gitlab_users[gitlab_username] = str(uid)
+    if bugzilla_mapping is not None:
+        for user in bugzilla_mapping:
+            gitlab_username = bugzilla_mapping[user]
+            uid = _get_user_id(gitlab_username, gitlab_url, gitlab_headers, verify=verify)
+            gitlab_users[gitlab_username] = str(uid)
+    else:
+        bugzilla_mapping = {}
 
     mappings = {}
     # bugzilla_username: gitlab_username
