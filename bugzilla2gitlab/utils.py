@@ -94,6 +94,8 @@ def get_bugzilla_bug(bugzilla_url, bug_id):
                 new = {}
                 for data in field:
                     new[data.tag] = data.text
+                    if data.tag == "who":
+                        new["who_name"] = data.attrib["name"]
                 bug_fields[field.tag].append(new)
             elif field.tag == "cc":
                 bug_fields[field.tag].append(field.text)
@@ -103,6 +105,8 @@ def get_bugzilla_bug(bugzilla_url, bug_id):
                 bug_fields[field.tag].append(field.text)
             else:
                 bug_fields[field.tag] = field.text
+                if field.tag == "reporter":
+                    bug_fields["reporter_name"] = field.attrib["name"]
 
     return bug_fields
 
