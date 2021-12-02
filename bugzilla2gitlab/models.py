@@ -323,6 +323,25 @@ class Comment:
         text = re.sub(r"([b|B]ug)\s(\d{1,6})", self.create_link, text)
         return text
 
+    def fix_quotes(self, text):
+        # add extra line break after last quote line ('>')
+        #TODO: replace with a one-liner regex ;)
+        last_line_quote = False
+        out = ""
+        for line in text.split('\n'):
+            if not line.startswith('>') and line and last_line_quote:
+                out += "\n"
+            out += line + "\n"
+            last_line_quote = line.startswith('>')
+        if not text.endswith('\n'):
+            out = out.rstrip()
+        return out
+
+    def fix_comment(self, text):
+        comment = self.find_bug_links(text)
+        comment = self.fix_quotes(comment)
+        return comment
+
     def load_fields(self, fields):
         self.sudo = CONF.gitlab_users[CONF.bugzilla_users[fields["who"]]]
         # if unable to comment as the original user, put username in comment body
@@ -345,7 +364,7 @@ class Comment:
             attachment_markdown = Attachment(fields["attachid"], filename).save()
             self.body += attachment_markdown
         else:
-            self.body += self.find_bug_links(fields["thetext"])
+            self.body += self.fix_comment(fields["thetext"])
 
         if CONF.dry_run:
             print ("<--Comment start-->")
