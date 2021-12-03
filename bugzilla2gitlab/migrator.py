@@ -1,6 +1,6 @@
 from .config import get_config
 from .models import IssueThread
-from .utils import bugzilla_login, get_bugzilla_bug, validate_list
+from .utils import bugzilla_login, get_bugzilla_bug, validate_list, fetch_bug_list, save_bug_list
 
 
 class Migrator:
@@ -11,13 +11,30 @@ class Migrator:
         """
         Migrate a list of bug ids from Bugzilla to GitLab.
         """
-        validate_list(bug_list)
+
         if self.conf.bugzilla_user:
             bugzilla_login(
                 self.conf.bugzilla_base_url,
                 self.conf.bugzilla_user,
                 self.conf.bugzilla_password,
             )
+
+        if self.conf.fetch_bugs:
+            bug_list = fetch_bug_list(self.conf.bugzilla_base_url,
+                       self.conf.bugzilla_api_token,
+                       self.conf.bugzilla_product,
+                       self.conf.bugzilla_component,
+                       self.conf.bugzilla_bug_status,
+                       self.conf.max_no_of_bugs)
+            
+            for l in bug_list:
+                print(l)
+            
+            #TODO: is storing bugs even necessary?
+            save_bug_list(bug_list, self.conf.buglist_file)
+
+        validate_list(bug_list)
+
         for bug in bug_list:
             self.migrate_one(bug)
 

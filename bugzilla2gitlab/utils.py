@@ -4,6 +4,7 @@ import dateutil.parser
 from defusedxml import ElementTree
 import pytz
 import requests
+import os
 
 SESSION = None
 
@@ -73,6 +74,42 @@ def format_utc(datestr):
     utc_dt = parsed_dt.astimezone(pytz.utc)
     return utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
+def fetch_bug_list(bugzilla_url, bugzilla_api_token, product, component, status, max_no_of_bugs):
+    status_filter = ""
+    for s in status:
+      status_filter += "&status={}".format(s)
+    #print (status_filter)
+
+    url = "{}/rest/bug?product={}&component={}{}&api_key={}".format(bugzilla_url, product, component, status_filter, bugzilla_api_token)
+    response = _perform_request(url, "get", json=True)
+    print ("Found {} bugs for product={}, component={}, status={}".format(len(response["bugs"]), product, component, status))
+
+    # create link to bug list
+    status_filter_link = ""
+    for s in status:
+      status_filter_link += "&bug_status={}".format(s)
+    print ("Bug list: {}/buglist.cgi?product={}&component={}{}".format(bugzilla_url, product, component, status_filter_link))
+
+    if len(response["bugs"]) > max_no_of_bugs:
+        raise Exception ("Do you really want to import more than {} bugs (consider filtering by bug status!)??".format(max_no_of_bugs))
+
+    buglist = []
+    for bug in response["bugs"]:
+        buglist.append(bug["id"])
+    return buglist
+
+def save_bug_list(buglist, file):
+    # dump bug numbers to file
+    # Create new file if it does not exist yet
+    #TODO: avoid empty line at the end?
+    if not os.path.exists(file):
+        with open(file, 'w') as fp:
+            fp.write('')
+
+    buglist_file = open(file, "w")
+    for bug in buglist:
+        buglist_file.write("{}\n".format(bug))
+    buglist_file.close()
 
 def get_bugzilla_bug(bugzilla_url, bug_id):
     """

@@ -40,6 +40,27 @@ bugzilla_user:
 # if not empty, you will be prompted for password once upon script startup
 bugzilla_password:
 
+# API token is required to access Bugzilla API, if fetch_bugs == true
+bugzilla_api_token: 
+
+# if true, fetch list of bugs from Bugzilla filtered by product, component, bug_status specified below
+fetch_bugs: false
+
+# Define Bugzilla product to fetch
+bugzilla_product: "superproduct"
+
+# Define Bugzilla component to fetch
+bugzilla_component: "mycomponent"
+
+# Define Python list of statuses to fetch (e.g. {"NEW", "ASSIGNED", "CLOSED"})
+bugzilla_bug_status: {"NEW"}
+
+# Max number of bugs to fetch before throwing an exception 
+max_no_of_bugs: 1000
+
+# define file to store bug numbers after fetching
+buglist_file: config/bug_list
+
 # Set to true to show datetime in every comment
 show_datetime_in_comments: true
 
