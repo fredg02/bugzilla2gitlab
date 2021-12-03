@@ -98,7 +98,18 @@ class Issue:
         if CONF.default_gitlab_labels:
             labels.extend(CONF.default_gitlab_labels)
 
-        component_label = CONF.component_mappings.get(component)
+        component_label = None
+        if not CONF.component_mappings is None:
+            component_label = CONF.component_mappings.get(component)
+
+        if component_label is None:
+            if CONF.component_mapping_auto: 
+                component_label = component
+            else:
+                raise Exception("No component mapping found for '{}'".format(component))
+
+        print ("Assigning component label: {}...".format(component_label))
+
         if component_label:
             labels.append(component_label)
 

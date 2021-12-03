@@ -92,3 +92,6 @@ map_milestones: true
 milestones_to_skip:
     - "---"
     - "UNKNOWN"
+
+# If enabled, a label for the component is created automatically (defined mappings still take precedence)
+component_mapping_auto: False

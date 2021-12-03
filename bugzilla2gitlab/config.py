@@ -18,6 +18,7 @@ Config = namedtuple(
         "bugzilla_closed_states",
         "default_headers",
         "component_mappings",
+        "component_mapping_auto",
         "bugzilla_users",
         "gitlab_users",
         "gitlab_misc_user",
