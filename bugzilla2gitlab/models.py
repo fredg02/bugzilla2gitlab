@@ -190,10 +190,12 @@ class Issue:
         blocklist = ""
         if fields.get("dependson"):
             for depends in fields.get("dependson"):
+                link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, depends)
                 deplist += "[{}]({}) ".format(depends, link)
             self.description += markdown_table_row("Depends On", deplist)
         if fields.get("blocked"):
             for blocked in fields.get("blocked"):
+                link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, blocked)
                 blocklist += "[{}]({}) ".format(blocked, link)
             self.description += markdown_table_row("Blocked by", blocklist)
 
