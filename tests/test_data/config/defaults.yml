@@ -17,8 +17,11 @@ verify: true
 # and fallback to the default behavior (i.e. auto-generate the issue id).
 use_bugzilla_id: false
 
+# Either define the GitLab project ID or project name (if ID is specified, name is ignored)
 # The GitLab project id
 gitlab_project_id: 5
+
+gitlab_project_name: "my-namespace/my-projectname"
 
 # The private token of the GitLab Administrator. This program needs GitLab sudo to run.
 # Read more about sudo here:

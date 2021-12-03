@@ -148,6 +148,14 @@ def bugzilla_login(url, user, password):
         raise Exception("Failed to log in after {} attempts".format(max_login_attempts))
 
 
+def get_gitlab_project_id(url, ns_project_name, headers):
+    # namespace and project name must be url-encoded! <YOUR-NAMESPACE>%2F<YOUR-PROJECT-NAME>
+    ns_project_name = ns_project_name.replace('/','%2F')
+    url = "{}/projects/{}".format(url, ns_project_name)
+    response = _perform_request(url, "get", json=True, headers=headers)
+    return response["id"]
+
+
 def validate_list(integer_list):
     """
     Ensure that the user-supplied input is a list of integers, or a list of strings

@@ -3,13 +3,14 @@ import os
 
 import yaml
 
-from .utils import _perform_request
+from .utils import _perform_request, get_gitlab_project_id
 
 Config = namedtuple(
     "Config",
     [
         "gitlab_base_url",
         "gitlab_project_id",
+        "gitlab_project_name",
         "bugzilla_base_url",
         "bugzilla_user",
         "bugzilla_password",
@@ -76,9 +77,26 @@ def _load_defaults(path):
 
     defaults = {}
 
+    #TODO: clean up
+    defaults["default_headers"] = {"private-token": config["gitlab_private_token"]}
+
     for key in config:
         if key == "gitlab_private_token":
-            defaults["default_headers"] = {"private-token": config[key]}
+            continue
+        if key == "gitlab_project_id":
+            if config[key] is None:
+                if config["gitlab_project_name"] is None:
+                    raise Exception("Either 'gitlab_project_id' or 'gitlab_project_name' must be set in config file!")
+                # if no gitlab_project_id is given, look_up id for gitlab_project_name
+                gitlab_project_id = get_gitlab_project_id(
+                                                            config["gitlab_base_url"],
+                                                            config["gitlab_project_name"],
+                                                            defaults["default_headers"])
+                print ("Found GitLab project ID: {} for {}".format(gitlab_project_id, config["gitlab_project_name"]))
+                defaults[key] = gitlab_project_id
+            else:
+                print ("Using GitLab project ID: {}".format(config["gitlab_project_id"]))
+                defaults[key] = config[key]
         else:
             defaults[key] = config[key]
 
