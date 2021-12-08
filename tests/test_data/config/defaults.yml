@@ -17,6 +17,9 @@ verify: true
 # and fallback to the default behavior (i.e. auto-generate the issue id).
 use_bugzilla_id: false
 
+# Use Bugzilla issue id in GitLab issue title, e.g. "[Bug 12345] Very serious issue"
+use_bugzilla_id_in_title: false
+
 # Either define the GitLab project ID or project name (if ID is specified, name is ignored)
 # The GitLab project id
 gitlab_project_id: 5

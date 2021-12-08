@@ -74,7 +74,12 @@ class Issue:
         self.load_fields(bugzilla_fields)
 
     def load_fields(self, fields):
-        self.title = fields["short_desc"]
+        if CONF.use_bugzilla_id_in_title:
+            self.title = "[Bug {}] {}".format(fields["bug_id"], fields["short_desc"])
+        else:
+            self.title = fields["short_desc"]
+        if CONF.dry_run:
+          print ("Bug title: {}".format(self.title))
         self.sudo = CONF.gitlab_users[CONF.bugzilla_users[fields["reporter"]]]
         self.assignee_ids = [
             CONF.gitlab_users[CONF.bugzilla_users[fields["assigned_to"]]]

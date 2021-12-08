@@ -37,6 +37,7 @@ Config = namedtuple(
         "include_os",
         "include_arch",
         "use_bugzilla_id",
+        "use_bugzilla_id_in_title",
         "verify",
         "config_path",
         "confidential_group",
