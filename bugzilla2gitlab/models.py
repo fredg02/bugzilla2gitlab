@@ -180,16 +180,22 @@ class Issue:
                 "Bugzilla Link", "[{}]({})".format(bug_id, link)
             )
 
-        formatted_dt = format_datetime(
-            fields["creation_ts"], CONF.datetime_format_string
-        )
-        self.description += markdown_table_row("Created on", formatted_dt)
+        formatted_creation_dt = format_datetime(fields["creation_ts"], CONF.datetime_format_string)
+        self.description += markdown_table_row("Reported",  "{} {}".format(formatted_creation_dt, CONF.timezone))
+
+        formatted_modification_dt = format_datetime(fields["delta_ts"], CONF.datetime_format_string)
+        self.description += markdown_table_row("Modified", "{} {}".format(formatted_modification_dt, CONF.timezone))
+
+        if fields.get("bug_status"):
+            status = fields["bug_status"]
+            if fields.get("resolution"):
+                status += " " + fields["resolution"]
+            self.description += markdown_table_row("Status", status)
 
         if fields.get("resolution"):
-            self.description += markdown_table_row("Resolution", fields["resolution"])
             self.description += markdown_table_row(
-                "Resolved on",
-                format_datetime(fields["delta_ts"], CONF.datetime_format_string),
+                "Resolved",
+                "{} {}".format(format_datetime(fields["delta_ts"], CONF.datetime_format_string), CONF.timezone),
             )
 
         if CONF.include_version:

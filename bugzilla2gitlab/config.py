@@ -41,6 +41,7 @@ Config = namedtuple(
         "verify",
         "config_path",
         "confidential_group",
+        "timezone"
     ],
 )
 

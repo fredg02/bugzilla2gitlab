@@ -101,3 +101,6 @@ component_mapping_auto: False
 
 # If the list of groups contains the following group, the issue will be marked as confidential in GitLab
 confidential_group: "Security_Advisories"
+
+# specify timezone name
+timezone: "EDT"
