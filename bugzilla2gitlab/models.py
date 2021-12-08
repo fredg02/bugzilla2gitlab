@@ -523,8 +523,8 @@ def _get_gitlab_user_by_email(email):
       return response[0]["username"]
 
 def validate_user(bugzilla_user):
-    print ("Validating username {}...".format(bugzilla_user))
     if bugzilla_user not in CONF.bugzilla_users:
+        print ("Validating username {}...".format(bugzilla_user))
         gitlab_user = _get_gitlab_user_by_email(bugzilla_user)
 
         if gitlab_user is not None:
