@@ -95,3 +95,6 @@ milestones_to_skip:
 
 # If enabled, a label for the component is created automatically (defined mappings still take precedence)
 component_mapping_auto: False
+
+# If the list of groups contains the following group, the issue will be marked as confidential in GitLab
+confidential_group: "Security_Advisories"

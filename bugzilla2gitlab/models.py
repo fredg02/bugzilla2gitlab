@@ -64,6 +64,7 @@ class Issue:
         "assignee_ids",
         "milestone_id",
         "labels",
+        "confidential"
     ]
 
     def __init__(self, bugzilla_fields):
@@ -80,6 +81,13 @@ class Issue:
         ]
         self.created_at = format_utc(fields["creation_ts"])
         self.status = fields["bug_status"]
+
+        #set confidential
+        if fields.get("group"):
+            if fields["group"] == CONF.confidential_group:
+               print ("Confidential group flag is set. Will mark issue as confidential!")
+               self.confidential = True
+
         self.create_labels(
             fields["component"], fields.get("op_sys"), fields.get("keywords")
         )

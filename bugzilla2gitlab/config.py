@@ -39,6 +39,7 @@ Config = namedtuple(
         "use_bugzilla_id",
         "verify",
         "config_path",
+        "confidential_group",
     ],
 )
 
