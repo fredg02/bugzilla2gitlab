@@ -87,6 +87,7 @@ def get_bugzilla_bug(bugzilla_url, bug_id):
         "cc": [],
         "dependson": [],
         "blocked": [],
+        "see_also": [],
     }
     for bug in tree:
         for field in bug:
@@ -102,6 +103,8 @@ def get_bugzilla_bug(bugzilla_url, bug_id):
             elif field.tag == "dependson":
                 bug_fields[field.tag].append(field.text)
             elif field.tag == "blocked":
+                bug_fields[field.tag].append(field.text)
+            elif field.tag == "see_also":
                 bug_fields[field.tag].append(field.text)
             else:
                 bug_fields[field.tag] = field.text
