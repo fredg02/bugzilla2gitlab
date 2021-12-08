@@ -379,6 +379,8 @@ class Comment:
     def fix_comment(self, text):
         comment = self.find_bug_links(text)
         comment = self.fix_quotes(comment)
+        # filter out hashtag in 'comment #5' to avoid linking to the wrong issues
+        comment = re.sub(r"comment #(\d)", "comment \\1", comment) 
         return comment
 
     def load_fields(self, fields):
