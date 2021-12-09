@@ -191,12 +191,6 @@ class Issue:
                 "Bugzilla Link", "[{}]({})".format(bug_id, link)
             )
 
-        formatted_creation_dt = format_datetime(fields["creation_ts"], CONF.datetime_format_string)
-        self.description += markdown_table_row("Reported",  "{} {}".format(formatted_creation_dt, CONF.timezone))
-
-        formatted_modification_dt = format_datetime(fields["delta_ts"], CONF.datetime_format_string)
-        self.description += markdown_table_row("Modified", "{} {}".format(formatted_modification_dt, CONF.timezone))
-
         if fields.get("bug_status"):
             status = fields["bug_status"]
             if fields.get("resolution"):
@@ -213,6 +207,12 @@ class Issue:
 
         if fields.get("priority"):
             self.description += markdown_table_row("Importance", "{} {}".format(fields["priority"], fields["bug_severity"]))
+
+        formatted_creation_dt = format_datetime(fields["creation_ts"], CONF.datetime_format_string)
+        self.description += markdown_table_row("Reported",  "{} {}".format(formatted_creation_dt, CONF.timezone))
+
+        formatted_modification_dt = format_datetime(fields["delta_ts"], CONF.datetime_format_string)
+        self.description += markdown_table_row("Modified", "{} {}".format(formatted_modification_dt, CONF.timezone))
 
         if CONF.include_version:
             self.description += markdown_table_row("Version", fields.get("version"))
