@@ -23,6 +23,8 @@ Config = namedtuple(
         "gitlab_users",
         "gitlab_misc_user",
         "default_gitlab_labels",
+        "severity_critical_label",
+        "severity_blocker_label",
         "show_datetime_in_comments",
         "datetime_format_string",
         "map_operating_system",

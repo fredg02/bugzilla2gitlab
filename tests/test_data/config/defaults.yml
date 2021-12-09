@@ -65,6 +65,12 @@ default_gitlab_labels:
     - "bugzilla"
     - "legacy"
 
+# Set individual label for bug severity "critical", if no set create/use "critical" as label
+severity_critical_label:
+
+# Set individual label for bug severity "blocker", if no set create/use "blocker" as label
+severity_blocker_label:
+
 # Include a link to the original bugzilla bug in the GitLab issue description
 include_bugzilla_link: true
 

@@ -94,7 +94,7 @@ class Issue:
                self.confidential = True
 
         self.create_labels(
-            fields["component"], fields.get("op_sys"), fields.get("keywords")
+            fields["component"], fields.get("op_sys"), fields.get("keywords"), fields["bug_severity"]
         )
         self.bug_id = fields["bug_id"]
         milestone = fields["target_milestone"]
@@ -102,7 +102,7 @@ class Issue:
             self.create_milestone(milestone)
         self.create_description(fields)
 
-    def create_labels(self, component, operating_system, keywords):
+    def create_labels(self, component, operating_system, keywords, severity):
         """
         Creates 4 types of labels: default labels listed in the configuration, component labels,
         operating system labels, and keyword labels.
@@ -140,6 +140,17 @@ class Issue:
             for k in keywords.replace(" ", "").split(","):
                 if not (CONF.keywords_to_skip and k in CONF.keywords_to_skip):
                     labels.append(k)
+
+        if severity:
+            if severity == "critical" or severity == "blocker":
+                if severity == "critical" and CONF.severity_critical_label:
+                    severity_label = CONF.severity_critical_label
+                elif severity == "blocker" and CONF.severity_blocker_label:
+                    severity_label = CONF.severity_blocker_label
+                else:
+                    severity_label = severity
+                print ("Found severity '{}'. Assigning label: '{}'...".format(severity, severity_label))
+                labels.append(severity_label)
 
         self.labels = ",".join(labels)
 
