@@ -209,6 +209,9 @@ class Issue:
                 "{} {}".format(format_datetime(fields["delta_ts"], CONF.datetime_format_string), CONF.timezone),
             )
 
+        if fields.get("priority"):
+            self.description += markdown_table_row("Importance", "{} {}".format(fields["priority"], fields["bug_severity"]))
+
         if CONF.include_version:
             self.description += markdown_table_row("Version", fields.get("version"))
         if CONF.include_os:
