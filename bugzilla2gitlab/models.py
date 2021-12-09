@@ -199,12 +199,6 @@ class Issue:
                     status += " of [bug {}]({}/show_bug.cgi?id={})".format(fields["dup_id"], CONF.bugzilla_base_url, fields["dup_id"])
             self.description += markdown_table_row("Status", status)
 
-        if fields.get("resolution"):
-            self.description += markdown_table_row(
-                "Resolved",
-                "{} {}".format(format_datetime(fields["delta_ts"], CONF.datetime_format_string), CONF.timezone),
-            )
-
         if fields.get("priority"):
             self.description += markdown_table_row("Importance", "{} {}".format(fields["priority"], fields["bug_severity"]))
 
