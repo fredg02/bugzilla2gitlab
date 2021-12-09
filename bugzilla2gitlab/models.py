@@ -201,6 +201,8 @@ class Issue:
             status = fields["bug_status"]
             if fields.get("resolution"):
                 status += " " + fields["resolution"]
+                if fields["resolution"] == "DUPLICATE":
+                    status += " of [bug {}]({}/show_bug.cgi?id={})".format(fields["dup_id"], CONF.bugzilla_base_url, fields["dup_id"])
             self.description += markdown_table_row("Status", status)
 
         if fields.get("resolution"):
