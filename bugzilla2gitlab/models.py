@@ -269,10 +269,14 @@ class Issue:
                 if part:
                     regex = r"^(\S*)\s?.*$"
                     email = re.match(regex, user_data, flags=re.M).group(1)
-                    self.description += markdown_table_row("Reporter", email)
+                    if CONF.show_email:
+                        self.description += markdown_table_row("Reporter", email)
             # Add original reporter to the markdown table
             elif CONF.bugzilla_users[fields["reporter"]] == CONF.gitlab_misc_user:
-                self.description += markdown_table_row("Reporter", "{} ({})".format(fields["reporter_name"], fields["reporter"]))
+                reporter = fields["reporter_name"]
+                if CONF.show_email:
+                    reporter += " ({})".format(fields["reporter"])
+                self.description += markdown_table_row("Reporter", reporter)
 
             self.description += ext_description
 
@@ -399,11 +403,13 @@ class Comment:
         self.created_at = format_utc(fields["bug_when"])
         self.body = ""
         if CONF.bugzilla_users[fields["who"]] == CONF.gitlab_misc_user:
-            self.body += "By {} ({})".format(fields["who_name"], fields["who"])
+            self.body += "By {}".format(fields["who_name"])
+            if CONF.show_email:
+                self.body += " ({})".format(fields["who"])
             if CONF.show_datetime_in_comments:
-              self.body += " on "
+                self.body += " on "
             else:
-              self.body += "\n\n"
+                self.body += "\n\n"
         if CONF.show_datetime_in_comments:
             self.body += format_datetime(fields["bug_when"], CONF.datetime_format_string)
             self.body += "\n\n"

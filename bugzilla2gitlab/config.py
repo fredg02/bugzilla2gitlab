@@ -26,6 +26,7 @@ Config = namedtuple(
         "severity_critical_label",
         "severity_blocker_label",
         "show_datetime_in_comments",
+        "show_email",
         "datetime_format_string",
         "map_operating_system",
         "map_keywords",

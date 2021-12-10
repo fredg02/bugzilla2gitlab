@@ -43,6 +43,9 @@ bugzilla_password:
 # Set to true to show datetime in every comment
 show_datetime_in_comments: true
 
+# Set to true to show emails in description and comments
+show_email: false
+
 # The way to format datetime strings in the GitLab issue description and comment body.
 datetime_format_string: "%b %d, %Y %H:%M"
 
