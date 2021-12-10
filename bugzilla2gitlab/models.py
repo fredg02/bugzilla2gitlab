@@ -222,12 +222,12 @@ class Issue:
             for depends in fields.get("dependson"):
                 link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, depends)
                 deplist += "[{}]({}) ".format(depends, link)
-            self.description += markdown_table_row("Depends On", deplist)
+            self.description += markdown_table_row("Depends on", deplist)
         if fields.get("blocked"):
             for blocked in fields.get("blocked"):
                 link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, blocked)
                 blocklist += "[{}]({}) ".format(blocked, link)
-            self.description += markdown_table_row("Blocked by", blocklist)
+            self.description += markdown_table_row("Blocks", blocklist)
         if fields.get("see_also"):
             for see_also in fields.get("see_also"):
                 see_also = see_also.replace("{}/show_bug.cgi?id=".format(CONF.bugzilla_base_url),"")
