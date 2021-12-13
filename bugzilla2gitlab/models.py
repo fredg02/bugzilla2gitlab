@@ -241,7 +241,9 @@ class Issue:
             for see_also in fields.get("see_also"):
                 see_also = see_also.replace("{}/show_bug.cgi?id=".format(CONF.bugzilla_base_url),"")
                 link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, see_also)
-                see_alsolist += "[{}]({}) ".format(see_also, link)
+                see_alsolist += "[{}]({}), ".format(see_also, link)
+            if see_alsolist.endswith(', '):
+                see_alsolist = see_alsolist[:-2]
             self.description += markdown_table_row("See also", see_alsolist)
 
         # add first comment to the issue description
