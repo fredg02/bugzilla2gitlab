@@ -137,3 +137,6 @@ confidential_group: "Security_Advisories"
 
 # specify timezone name
 timezone: "EDT"
+
+# Set to true to close Bugzilla ticket (CLOSED MOVED) and post a comment with a link to the migrated GitLab issue
+close_bugzilla_bugs: false

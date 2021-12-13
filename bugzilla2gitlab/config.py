@@ -53,7 +53,8 @@ Config = namedtuple(
         "config_path",
         "confidential_group",
         "timezone",
-        "unassign_list"
+        "unassign_list",
+        "close_bugzilla_bugs"
         
     ],
 )

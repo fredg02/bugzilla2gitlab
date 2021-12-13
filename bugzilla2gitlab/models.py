@@ -1,4 +1,4 @@
-import re
+import re, json
 
 from .utils import _perform_request, format_datetime, format_utc, markdown_table_row, add_user_mapping
 from .config import _get_user_id
@@ -48,6 +48,10 @@ class IssueThread:
         # close the issue in GitLab, if it is resolved in Bugzilla
         if self.issue.status in CONF.bugzilla_closed_states:
             self.issue.close()
+
+        # close the issue in Bugzilla
+        if CONF.close_bugzilla_bugs: # and not CONF.dry_run:
+            self.issue.closeBugzilla()
 
 
 class Issue:
@@ -362,6 +366,32 @@ class Issue:
             verify=CONF.verify,
         )
 
+    def closeBugzilla(self):
+        # set status to CLOSED MOVED and post comment at the same time
+        # PUT /rest/bug/(id_or_alias)
+
+        # TODO: works only with CONF.gitlab_project_name (otherwise an extra look-up is required)
+        gitlab_url = CONF.gitlab_base_url.replace('api/v4','')
+        issue_in_gitlab = "{}{}/-/issues/{}".format(gitlab_url, CONF.gitlab_project_name, self.id)
+        comment = {}
+        comment["comment"] = "This issue has been migrated to {}.".format(issue_in_gitlab)
+        comment["is_private"] = False
+        data = {}
+        data["id"] = self.bug_id
+        data["status"] = "CLOSED"
+        data["resolution"] = "MOVED"
+        data["comment"] = comment
+
+        json_data = json.dumps(data)
+        #print (json.dumps(data, indent=4))
+
+        url = "{}/rest/bug/{}?api_key={}".format(CONF.bugzilla_base_url, self.bug_id, CONF.bugzilla_api_token)
+        response = _perform_request(url, "put", data=json_data, headers={"Content-Type": "application/json"}, json=True)
+        if response.get("error"):
+            print ("Response:")
+            print (json.dumps(response, indent=4))
+        else:
+            print ("Bugzilla issue has been closed.\n")
 
 class Comment:
     """
