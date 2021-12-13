@@ -44,7 +44,9 @@ Config = namedtuple(
         "verify",
         "config_path",
         "confidential_group",
-        "timezone"
+        "timezone",
+        "unassign_list"
+        
     ],
 )
 
@@ -74,7 +76,9 @@ def get_config(path):
     temp = {}
     temp["config_path"] = path
     configuration.update(temp)
-    
+
+    configuration.update(_load_unassign_list(path))
+
     return Config(**configuration)
 
 
@@ -143,6 +147,20 @@ def _load_user_id_cache(path, gitlab_url, gitlab_headers, verify):
 
     return mappings
 
+def _load_unassign_list(path):
+    file = os.path.join(path, "unassign_users") 
+    lines = []
+    if os.path.exists(file):
+        print("Loading unassign list...")
+        unassign_file = open(file, "r")
+        for line in unassign_file:
+            #filter out comments & empty lines
+            if not(line.startswith("#")) and len(line.strip()) > 0:
+                lines.append(line.strip())
+        unassign_file.close()
+    temp = {}
+    temp["unassign_list"] = lines
+    return temp
 
 def _load_milestone_id_cache(project_id, gitlab_url, gitlab_headers, verify):
     """

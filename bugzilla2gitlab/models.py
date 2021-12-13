@@ -81,9 +81,14 @@ class Issue:
         if CONF.dry_run:
           print ("Bug title: {}".format(self.title))
         self.sudo = CONF.gitlab_users[CONF.bugzilla_users[fields["reporter"]]]
-        self.assignee_ids = [
-            CONF.gitlab_users[CONF.bugzilla_users[fields["assigned_to"]]]
-        ]
+
+        if fields["assigned_to"] in CONF.unassign_list:
+            self.assignee_ids = ""
+            print ("Found match in unassign_list, assigning issue to no one!") 
+        else:
+            self.assignee_ids = [CONF.gitlab_users[CONF.bugzilla_users[fields["assigned_to"]]]]
+            print ("Assigning issue to {}".format(CONF.bugzilla_users[fields["assigned_to"]])) 
+
         self.created_at = format_utc(fields["creation_ts"])
         self.status = fields["bug_status"]
 
