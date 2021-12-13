@@ -26,10 +26,7 @@ class Migrator:
                        self.conf.bugzilla_component,
                        self.conf.bugzilla_bug_status,
                        self.conf.max_no_of_bugs)
-            
-            for l in bug_list:
-                print(l)
-            
+
             #TODO: is storing bugs even necessary?
             save_bug_list(bug_list, self.conf.buglist_file)
 
