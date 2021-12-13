@@ -101,6 +101,9 @@ include_bugzilla_link: true
 # Include version in the GitLab issue description
 include_version: true
 
+# Include version in the GitLab issue description - only if not "unspecified"
+include_version_only_when_specified: true
+
 # Include OS in the GitLab issue description
 include_os: true
 

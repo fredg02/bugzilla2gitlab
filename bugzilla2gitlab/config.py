@@ -44,6 +44,7 @@ Config = namedtuple(
         "dry_run",
         "include_bugzilla_link",
         "include_version",
+        "include_version_only_when_specified",
         "include_os",
         "include_arch",
         "use_bugzilla_id",

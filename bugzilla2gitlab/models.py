@@ -214,7 +214,11 @@ class Issue:
         self.description += markdown_table_row("Modified", "{} {}".format(formatted_modification_dt, CONF.timezone))
 
         if CONF.include_version:
-            self.description += markdown_table_row("Version", fields.get("version"))
+            if CONF.include_version_only_when_specified:
+                if fields.get("version") != "unspecified":
+                    self.description += markdown_table_row("Version", fields.get("version"))
+            else:
+                self.description += markdown_table_row("Version", fields.get("version"))
         if CONF.include_os:
             self.description += markdown_table_row("OS", fields.get("op_sys"))
         if CONF.include_arch:
