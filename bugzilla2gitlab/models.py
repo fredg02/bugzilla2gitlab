@@ -183,6 +183,17 @@ class Issue:
 
         self.milestone_id = CONF.gitlab_milestones[milestone]
 
+    def create_link(self, match_obj):
+       if match_obj.group(1) is not None and match_obj.group(2) is not None:
+          bug_id = match_obj.group(2)
+          link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, bug_id)
+          return "[{} {}]({})".format(match_obj.group(1), bug_id, link)
+
+    def find_bug_links(self, text):
+        # replace '[b|B]ug 12345' with markdown link
+        text = re.sub(r"([b|B]ug)\s(\d{1,6})", self.create_link, text)
+        return text
+
     def create_description(self, fields):
         """
         An opinionated description body creator.
@@ -293,7 +304,8 @@ class Issue:
                     reporter += " ({})".format(fields["reporter"])
                 self.description += markdown_table_row("Reporter", reporter)
 
-            self.description += ext_description
+            #self.description += ext_description
+            self.description += self.find_bug_links(ext_description)
 
         if CONF.dry_run:
             print (self.description)
