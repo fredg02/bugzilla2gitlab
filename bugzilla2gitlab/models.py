@@ -183,17 +183,6 @@ class Issue:
 
         self.milestone_id = CONF.gitlab_milestones[milestone]
 
-    def create_link(self, match_obj):
-       if match_obj.group(1) is not None and match_obj.group(2) is not None:
-          bug_id = match_obj.group(2)
-          link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, bug_id)
-          return "[{} {}]({})".format(match_obj.group(1), bug_id, link)
-
-    def find_bug_links(self, text):
-        # replace '[b|B]ug 12345' with markdown link
-        text = re.sub(r"([b|B]ug)\s(\d{1,6})", self.create_link, text)
-        return text
-
     def create_description(self, fields):
         """
         An opinionated description body creator.
@@ -309,7 +298,7 @@ class Issue:
                 self.description += markdown_table_row("Reporter", reporter)
 
             #self.description += ext_description
-            self.description += self.find_bug_links(ext_description)
+            self.description += find_bug_links(ext_description)
 
         if CONF.dry_run:
             print (self.description)
@@ -433,17 +422,6 @@ class Comment:
         validate_user(bugzilla_fields["who"])
         self.load_fields(bugzilla_fields)
 
-    def create_link(self, match_obj):
-       if match_obj.group(1) is not None and match_obj.group(2) is not None:
-          bug_id = match_obj.group(2)
-          link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, bug_id)
-          return "[{} {}]({})".format(match_obj.group(1), bug_id, link)
-
-    def find_bug_links(self, text):
-        # replace '[b|B]ug 12345' with markdown link
-        text = re.sub(r"([b|B]ug)\s(\d{1,6})", self.create_link, text)
-        return text
-
     def fix_quotes(self, text):
         # add extra line break after last quote line ('>')
         #TODO: replace with a one-liner regex ;)
@@ -459,7 +437,7 @@ class Comment:
         return out
 
     def fix_comment(self, text):
-        comment = self.find_bug_links(text)
+        comment = find_bug_links(text)
         comment = self.fix_quotes(comment)
         # filter out hashtag in 'comment #5' to avoid linking to the wrong issues
         comment = re.sub(r"comment #(\d)", "comment \\1", comment) 
@@ -651,3 +629,20 @@ def validate_user(bugzilla_user):
                 "No matching GitLab user found for Bugzilla user `{}` "
                 "Please add them before continuing.".format(bugzilla_user)
             )
+
+def create_link(match_obj):
+    if match_obj.group(3) is not None:
+        bug_id = match_obj.group(2)
+        comment_no = match_obj.group(5)
+        link = "{}/show_bug.cgi?id={}#c{}".format(CONF.bugzilla_base_url, bug_id, comment_no)
+        return "[{} {} {}]({})".format(match_obj.group(1), bug_id, match_obj.group(3), link)
+    else:
+        bug_id = match_obj.group(2)
+        link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, bug_id)
+        return "[{} {}]({})".format(match_obj.group(1), bug_id, link)
+
+def find_bug_links(text):
+    # replace '[b|B]ug 12345' with markdown link
+    text = re.sub(r"([b|B]ug)\s(\d{1,6})\s?(([c|C]omment)\s\#?(\d{1,6}))?", create_link, text)
+    return text
+            
