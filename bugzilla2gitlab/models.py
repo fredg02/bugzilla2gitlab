@@ -1,6 +1,6 @@
 import re, json
 
-from .utils import _perform_request, format_datetime, format_utc, markdown_table_row, add_user_mapping
+from .utils import _perform_request, format_datetime, format_utc, markdown_table_row, add_user_mapping, is_admin, set_admin_permission
 from .config import _get_user_id
 
 CONF = None
@@ -328,6 +328,12 @@ class Issue:
             print("Using original issue id")
             data["iid"] = self.bug_id
 
+        admin_status_issue = is_admin(CONF.gitlab_base_url, self.sudo, CONF.default_headers)
+
+        if admin_status_issue is not None and not admin_status_issue:
+            print ("")
+            response = set_admin_permission(CONF.gitlab_base_url, self.sudo, True, CONF.default_headers)
+
         self.headers["sudo"] = self.sudo
 
         response = _perform_request(
@@ -347,6 +353,11 @@ class Issue:
 
         self.id = response["iid"]
         print("Created issue with id: {}".format(self.id))
+
+        #TODO: make sure this is always set, even if there is an exception
+        if admin_status_issue is not None and not admin_status_issue:
+            response = set_admin_permission(CONF.gitlab_base_url, self.sudo, False, CONF.default_headers)
+            print ("")
 
     def close(self):
         url = "{}/projects/{}/issues/{}".format(
@@ -477,11 +488,18 @@ class Comment:
 
     def save(self):
         self.validate()
-        self.headers["sudo"] = self.sudo
         url = "{}/projects/{}/issues/{}/notes".format(
             CONF.gitlab_base_url, CONF.gitlab_project_id, self.issue_id
         )
         data = {k: v for k, v in self.__dict__.items() if k in self.data_fields}
+
+        admin_status_comment = is_admin(CONF.gitlab_base_url, self.sudo, CONF.default_headers)
+
+        if admin_status_comment is not None and not admin_status_comment:
+            print ("")
+            response = set_admin_permission(CONF.gitlab_base_url, self.sudo, True, CONF.default_headers)
+
+        self.headers["sudo"] = self.sudo
 
         _perform_request(
             url,
@@ -492,7 +510,12 @@ class Comment:
             dry_run=CONF.dry_run,
             verify=CONF.verify,
         )
+        print("Created comment")
 
+        #TODO: make sure this is always set, even if there is an exception
+        if admin_status_comment is not None and not admin_status_comment:
+            response = set_admin_permission(CONF.gitlab_base_url, self.sudo, False, CONF.default_headers)
+            print("")
 
 class Attachment:
     """

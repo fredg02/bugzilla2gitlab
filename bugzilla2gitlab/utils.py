@@ -3,8 +3,7 @@ from getpass import getpass
 import dateutil.parser
 from defusedxml import ElementTree
 import pytz
-import requests
-import os
+import requests, os, json
 
 SESSION = None
 
@@ -195,6 +194,30 @@ def get_gitlab_project_id(url, ns_project_name, headers):
     response = _perform_request(url, "get", json=True, headers=headers)
     return response["id"]
 
+
+def set_admin_permission(url, id, admin, headers):
+    if admin:
+        print ("Setting temporary admin permissions for id {}.".format(id))
+    else:
+        print ("Removing temporary admin permissions for id {}.".format(id))
+    # sanitize sudo header!!
+    if "sudo" in headers:
+        headers.pop("sudo")
+    url = "{}/users/{}?admin={}".format(url, id, admin)
+    response = _perform_request(url, "put", json=True, headers=headers)
+    return response
+
+def is_admin(url, id, headers):
+    response = get_gitlab_user(url, id, headers)
+    if "is_admin" in response:
+        return response["is_admin"]
+    else:
+        print ("ERROR: is_admin was not found in response.")
+
+def get_gitlab_user(url, id, headers):
+    url = "{}/users/{}".format(url, id)
+    response = _perform_request(url, "get", json=True, headers=headers)
+    return response
 
 def validate_list(integer_list):
     """
