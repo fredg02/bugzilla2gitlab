@@ -631,18 +631,18 @@ def validate_user(bugzilla_user):
             )
 
 def create_link(match_obj):
-    if match_obj.group(3) is not None:
+    if match_obj.group(4) is not None:
         bug_id = match_obj.group(2)
-        comment_no = match_obj.group(5)
+        comment_no = match_obj.group(6)
         link = "{}/show_bug.cgi?id={}#c{}".format(CONF.bugzilla_base_url, bug_id, comment_no)
-        return "[{} {} {}]({})".format(match_obj.group(1), bug_id, match_obj.group(3), link)
+        return "[{} {} {}]({})".format(match_obj.group(1), bug_id, match_obj.group(4), link)
     else:
         bug_id = match_obj.group(2)
         link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, bug_id)
-        return "[{} {}]({})".format(match_obj.group(1), bug_id, link)
+        return "[{} {}]({}){}".format(match_obj.group(1), bug_id, link, match_obj.group(3))
 
 def find_bug_links(text):
     # replace '[b|B]ug 12345' with markdown link
-    text = re.sub(r"([b|B]ug)\s(\d{1,6})\s?(([c|C]omment)\s\#?(\d{1,6}))?", create_link, text)
+    text = re.sub(r"([b|B]ug)\s(\d{1,6})(\s?)(([c|C]omment)\s\#?(\d{1,6}))?", create_link, text)
     return text
-            
+
