@@ -23,7 +23,7 @@ class Migrator:
             bug_list = fetch_bug_list(self.conf.bugzilla_base_url,
                        self.conf.bugzilla_api_token,
                        self.conf.bugzilla_product,
-                       self.conf.bugzilla_component,
+                       self.conf.bugzilla_components,
                        self.conf.bugzilla_bug_status,
                        self.conf.max_no_of_bugs)
 

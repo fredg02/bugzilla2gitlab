@@ -18,7 +18,7 @@ Config = namedtuple(
         "bugzilla_auto_reporter",
         "bugzilla_closed_states",
         "bugzilla_product",
-        "bugzilla_component",
+        "bugzilla_components",
         "bugzilla_bug_status",
         "fetch_bugs",
         "max_no_of_bugs",

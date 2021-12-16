@@ -49,11 +49,11 @@ fetch_bugs: false
 # Define Bugzilla product to fetch
 bugzilla_product: "superproduct"
 
-# Define Bugzilla component to fetch
-bugzilla_component: "mycomponent"
+# Define a Python list of Bugzilla components to fetch
+bugzilla_components: ["mycomponent"]
 
-# Define Python list of statuses to fetch (e.g. {"NEW", "ASSIGNED", "CLOSED"})
-bugzilla_bug_status: {"NEW"}
+# Define a Python list of statuses to fetch (e.g. ["UNCONFIRMED", "NEW", "ASSIGNED", "REOPENED", "CLOSED"])
+bugzilla_bug_status: ["NEW"]
 
 # Max number of bugs to fetch before throwing an exception 
 max_no_of_bugs: 1000

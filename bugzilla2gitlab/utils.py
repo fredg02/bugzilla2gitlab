@@ -73,21 +73,24 @@ def format_utc(datestr):
     utc_dt = parsed_dt.astimezone(pytz.utc)
     return utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-def fetch_bug_list(bugzilla_url, bugzilla_api_token, product, component, status, max_no_of_bugs):
+def fetch_bug_list(bugzilla_url, bugzilla_api_token, product, components, status, max_no_of_bugs):
     status_filter = ""
     for s in status:
       status_filter += "&status={}".format(s)
     #print (status_filter)
+    components_list = ""
+    for component in components:
+        components_list += "&component={}".format(component)
 
-    url = "{}/rest/bug?product={}&component={}{}&api_key={}".format(bugzilla_url, product, component, status_filter, bugzilla_api_token)
+    url = "{}/rest/bug?product={}{}{}&api_key={}".format(bugzilla_url, product, components_list, status_filter, bugzilla_api_token)
     response = _perform_request(url, "get", json=True)
-    print ("Found {} bugs for product={}, component={}, status={}".format(len(response["bugs"]), product, component, status))
+    print ("Found {} bugs for product={}, component={}, status={}".format(len(response["bugs"]), product, components, status))
 
     # create link to bug list
     status_filter_link = ""
     for s in status:
       status_filter_link += "&bug_status={}".format(s)
-    print ("Bug list: {}/buglist.cgi?product={}&component={}{}".format(bugzilla_url, product, component, status_filter_link))
+    print ("Bug list: {}/buglist.cgi?product={}{}{}".format(bugzilla_url, product, components_list, status_filter_link))
 
     if len(response["bugs"]) > max_no_of_bugs:
         raise Exception ("Do you really want to import more than {} bugs (consider filtering by bug status!)??".format(max_no_of_bugs))
