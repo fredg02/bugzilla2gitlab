@@ -475,7 +475,7 @@ class Comment:
         # if unable to comment as the original user, put username in comment body
         self.created_at = format_utc(fields["bug_when"])
         self.body = ""
-        if CONF.bugzilla_users[fields["who"]] == CONF.gitlab_misc_user:
+        if CONF.bugzilla_users[fields["who"]] == CONF.gitlab_misc_user and fields["who"] != CONF.bugzilla_misc_user:
             self.body += "By {}".format(fields["who_name"])
             if CONF.show_email:
                 self.body += " ({})".format(fields["who"])

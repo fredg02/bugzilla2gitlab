@@ -20,6 +20,7 @@ Config = namedtuple(
         "bugzilla_product",
         "bugzilla_components",
         "bugzilla_bug_status",
+        "bugzilla_misc_user",
         "fetch_bugs",
         "max_no_of_bugs",
         "buglist_file",
