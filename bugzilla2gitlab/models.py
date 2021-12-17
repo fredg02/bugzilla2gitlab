@@ -369,6 +369,12 @@ class Issue:
             response = set_admin_permission(CONF.gitlab_base_url, self.sudo, False, CONF.default_headers)
             print ("")
 
+    def who_closed_the_bug(self, bug_id):
+        url = "{}/rest/bug/{}/history?api_key={}".format(CONF.bugzilla_base_url, bug_id, CONF.bugzilla_api_token)
+        response = _perform_request(url, "get", json=True)
+        last_change = response["bugs"][0]["history"][-1]
+        return last_change["who"]
+
     def close(self):
         url = "{}/projects/{}/issues/{}".format(
             CONF.gitlab_base_url, CONF.gitlab_project_id, self.id
@@ -376,7 +382,15 @@ class Issue:
         data = {
             "state_event": "close",
         }
-        self.headers["sudo"] = self.sudo
+        who = self.who_closed_the_bug(self.bug_id)
+        print ("who closed the bug: {}".format(who))
+        #print ("self.sudo ID: {}".format(self.sudo))
+        #print ("who ID: {}".format(CONF.gitlab_users[CONF.bugzilla_users[who]]))
+
+        if who is not None:
+            self.headers["sudo"] = CONF.gitlab_users[CONF.bugzilla_users[who]]
+        else:
+            self.headers["sudo"] = self.sudo
 
         _perform_request(
             url,
@@ -448,7 +462,7 @@ class Comment:
         return text
 
     def load_fields(self, fields):
-        self.sudo = CONF.gitlab_users[CONF.bugzilla_users[fields["who"]]]
+        self.sudo = CONF.gitlab_users[CONF.bugzilla_users[fields["who"]]] # GitLab user ID
         # if unable to comment as the original user, put username in comment body
         self.created_at = format_utc(fields["bug_when"])
         self.body = ""
