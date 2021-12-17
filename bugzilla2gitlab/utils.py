@@ -5,8 +5,17 @@ from defusedxml import ElementTree
 import pytz
 import requests, os, json
 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
 SESSION = None
 
+retry_strategy = Retry(
+    total=3,
+    status_forcelist=[429, 500, 502, 503, 504],
+    method_whitelist=["HEAD", "GET", "OPTIONS"]
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
 
 def _perform_request(
     url,
@@ -30,6 +39,8 @@ def _perform_request(
     global SESSION
     if not SESSION:
         SESSION = requests.Session()
+        SESSION.mount("https://", adapter)
+        SESSION.mount("http://", adapter)
 
     func = getattr(SESSION, method)
 
