@@ -298,11 +298,16 @@ class Issue:
                 self.description += markdown_table_row("Reporter", reporter)
 
             #self.description += ext_description
-            self.description += find_bug_links(ext_description)
+            self.description += self.fix_description(ext_description)
 
         if CONF.dry_run:
             print (self.description)
             print ("\n")
+
+    def fix_description(self, text):
+        text = find_bug_links(text)
+        text = escape_hashtags(text)
+        return text
 
     def update_attachments(self, reporter, comment, attachments):
         """
@@ -437,11 +442,10 @@ class Comment:
         return out
 
     def fix_comment(self, text):
-        comment = find_bug_links(text)
-        comment = self.fix_quotes(comment)
-        # filter out hashtag in 'comment #5' to avoid linking to the wrong issues
-        comment = re.sub(r"comment #(\d)", "comment \\1", comment) 
-        return comment
+        text = escape_hashtags(text)
+        text = find_bug_links(text)
+        text = self.fix_quotes(text)
+        return text
 
     def load_fields(self, fields):
         self.sudo = CONF.gitlab_users[CONF.bugzilla_users[fields["who"]]]
@@ -642,7 +646,12 @@ def create_link(match_obj):
         return "[{} {}]({}){}".format(match_obj.group(1), bug_id, link, match_obj.group(3))
 
 def find_bug_links(text):
-    # replace '[b|B]ug 12345' with markdown link
-    text = re.sub(r"([b|B]ug)\s(\d{1,6})(\s?)(([c|C]omment)\s\#?(\d{1,6}))?", create_link, text)
+    # replace '[b|B]ug 12345 [c|C]omment 1' with markdown link
+    text = re.sub(r"([b|B]ug)\s(\d{1,6})(\s?)(([c|C]omment)\s\\?\#?(\d{1,6}))?", create_link, text)
+    return text
+
+def escape_hashtags(text):
+    # escape hashtag in '#5' to avoid linking to the wrong issues
+    text = re.sub(r"\#(\d)", "\#\\1", text)
     return text
 
