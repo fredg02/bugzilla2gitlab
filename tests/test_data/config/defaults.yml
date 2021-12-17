@@ -140,3 +140,9 @@ timezone: "EDT"
 
 # Set to true to close Bugzilla ticket (CLOSED MOVED) and post a comment with a link to the migrated GitLab issue
 close_bugzilla_bugs: false
+
+# Define Gerrit base URL for see also links
+see_also_gerrit_link_base_url: "https://git.example.com/r"
+
+# Define Git base URL for see also links
+see_also_git_link_base_url: "https://git.example.com/c"

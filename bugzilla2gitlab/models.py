@@ -247,9 +247,18 @@ class Issue:
             self.description += markdown_table_row("Blocks", blocklist)
         if fields.get("see_also"):
             for see_also in fields.get("see_also"):
-                see_also = see_also.replace("{}/show_bug.cgi?id=".format(CONF.bugzilla_base_url),"")
-                link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, see_also)
-                see_alsolist += "[{}]({}), ".format(see_also, link)
+                if CONF.see_also_gerrit_link_base_url in see_also:
+                    pattern = CONF.see_also_gerrit_link_base_url + '/c/.*/\+/'
+                    gerrit_id = re.sub(pattern, '', see_also)
+                    see_alsolist += "[Gerrit change {}]({}), ".format(gerrit_id, see_also)
+                elif CONF.see_also_git_link_base_url in see_also:
+                    pattern = CONF.see_also_git_link_base_url + '/.*id='
+                    commit_id = re.sub(pattern, '', see_also)[0:8]
+                    see_alsolist += "[Git commit {}]({}), ".format(commit_id, see_also)
+                else:
+                    see_also = see_also.replace("{}/show_bug.cgi?id=".format(CONF.bugzilla_base_url),"")
+                    link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, see_also)
+                    see_alsolist += "[{}]({}), ".format(see_also, link)
             if see_alsolist.endswith(', '):
                 see_alsolist = see_alsolist[:-2]
             self.description += markdown_table_row("See also", see_alsolist)
