@@ -464,10 +464,26 @@ class Comment:
             out = out.rstrip()
         return out
 
+    def fix_newlines(self, text):
+        # fix line breaks in markdown syntax
+        out = ""
+        split_list = text.split('\n')
+        for index, line in enumerate(split_list):
+            if index < len(split_list)-1:
+                next_line = split_list[index+1]
+                if (len(line) > 0 and len(next_line) > 0 and not next_line.startswith('>')) or (line.startswith('>') and len(next_line) > 0):
+                   out += line + '\\\n'
+                else:
+                   out += line + '\n'
+        else:
+            out += line
+        return out
+
     def fix_comment(self, text):
         text = escape_hashtags(text)
         text = find_bug_links(text)
         text = self.fix_quotes(text)
+        text = self.fix_newlines(text)
         return text
 
     def load_fields(self, fields):
