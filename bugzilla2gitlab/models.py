@@ -103,7 +103,7 @@ class Issue:
                self.confidential = True
 
         self.create_labels(
-            fields["component"], fields.get("op_sys"), fields.get("keywords"), fields["bug_severity"]
+            fields["component"], fields.get("op_sys"), fields.get("keywords"), fields["bug_severity"], fields["status_whiteboard"]
         )
         self.bug_id = fields["bug_id"]
         milestone = fields["target_milestone"]
@@ -111,7 +111,7 @@ class Issue:
             self.create_milestone(milestone)
         self.create_description(fields)
 
-    def create_labels(self, component, operating_system, keywords, severity):
+    def create_labels(self, component, operating_system, keywords, severity, spam):
         """
         Creates 4 types of labels: default labels listed in the configuration, component labels,
         operating system labels, and keyword labels.
@@ -160,6 +160,10 @@ class Issue:
                     severity_label = severity
                 print ("Found severity '{}'. Assigning label: '{}'...".format(severity, severity_label))
                 labels.append(severity_label)
+
+        if spam and spam.lower() == "spam":
+           print ("Found keyword spam in whiteboard field! Assigning label...")
+           labels.append("spam")
 
         self.labels = ",".join(labels)
 
