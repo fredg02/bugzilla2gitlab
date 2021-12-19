@@ -274,50 +274,50 @@ class Issue:
         # deal with empty descriptions
         if not fields.get("long_desc"):
             print ("Description is EMPTY!")
+            self.description += "\n## Description \n"
             self.description += "EMPTY DESCRIPTION"
-            return
+        else:
+            comment0 = fields["long_desc"][0]
+            if fields["reporter"] == comment0["who"] and comment0["thetext"]:
+                ext_description += "\n## Description \n"
+                ext_description += "\n\n".join(re.split("\n+", comment0["thetext"]))
+                self.update_attachments(fields["reporter"], comment0, attachments)
+                del fields["long_desc"][0]
 
-        comment0 = fields["long_desc"][0]
-        if fields["reporter"] == comment0["who"] and comment0["thetext"]:
-            ext_description += "\n## Description \n"
-            ext_description += "\n\n".join(re.split("\n+", comment0["thetext"]))
-            self.update_attachments(fields["reporter"], comment0, attachments)
-            del fields["long_desc"][0]
+            for i in range(0, len(fields["long_desc"])):
+                comment = fields["long_desc"][i]
+                if self.update_attachments(fields["reporter"], comment, attachments):
+                    to_delete.append(i)
 
-        for i in range(0, len(fields["long_desc"])):
-            comment = fields["long_desc"][i]
-            if self.update_attachments(fields["reporter"], comment, attachments):
-                to_delete.append(i)
+            # delete comments that have already added to the issue description
+            for i in reversed(to_delete):
+                del fields["long_desc"][i]
 
-        # delete comments that have already added to the issue description
-        for i in reversed(to_delete):
-            del fields["long_desc"][i]
+            if attachments:
+                self.description += markdown_table_row(
+                    "Attachments", ", ".join(attachments)
+                )
 
-        if attachments:
-            self.description += markdown_table_row(
-                "Attachments", ", ".join(attachments)
-            )
-
-        if ext_description:
-            # for situations where the reporter is a generic or old user, specify the original
-            # reporter in the description body
-            if fields["reporter"] == CONF.bugzilla_auto_reporter:
-                # try to get reporter email from the body
-                _, part, user_data = ext_description.rpartition("Submitter was ")
-                # partition found matching string
-                if part:
-                    regex = r"^(\S*)\s?.*$"
-                    email = re.match(regex, user_data, flags=re.M).group(1)
+            if ext_description:
+                # for situations where the reporter is a generic or old user, specify the original
+                # reporter in the description body
+                if fields["reporter"] == CONF.bugzilla_auto_reporter:
+                    # try to get reporter email from the body
+                    _, part, user_data = ext_description.rpartition("Submitter was ")
+                    # partition found matching string
+                    if part:
+                        regex = r"^(\S*)\s?.*$"
+                        email = re.match(regex, user_data, flags=re.M).group(1)
+                        if CONF.show_email:
+                            self.description += markdown_table_row("Reporter", email)
+                # Add original reporter to the markdown table
+                elif CONF.bugzilla_users[fields["reporter"]] == CONF.gitlab_misc_user:
+                    reporter = fields["reporter_name"]
                     if CONF.show_email:
-                        self.description += markdown_table_row("Reporter", email)
-            # Add original reporter to the markdown table
-            elif CONF.bugzilla_users[fields["reporter"]] == CONF.gitlab_misc_user:
-                reporter = fields["reporter_name"]
-                if CONF.show_email:
-                    reporter += " ({})".format(fields["reporter"])
-                self.description += markdown_table_row("Reporter", reporter)
-
-            self.description += self.fix_description(ext_description)
+                        reporter += " ({})".format(fields["reporter"])
+                    self.description += markdown_table_row("Reporter", reporter)
+    
+                self.description += self.fix_description(ext_description)
 
         if CONF.dry_run:
             print (self.description)
