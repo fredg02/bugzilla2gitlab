@@ -188,40 +188,34 @@ class Issue:
         self.milestone_id = CONF.gitlab_milestones[milestone]
 
     def show_related_bugs(self, fields):
-        deplist = ""
-        blocklist = ""
-        see_alsolist = ""
+        deplist = []
+        blocklist = []
+        see_alsolist = []
         if fields.get("dependson"):
             for depends in fields.get("dependson"):
                 link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, depends)
-                deplist += "[{}]({}) ".format(depends, link)
-            if deplist.endswith(', '):
-                deplist = deplist[:-2]
-            self.description += markdown_table_row("Depends on", deplist)
+                deplist.append("[{}]({})".format(depends, link))
+            self.description += markdown_table_row("Depends on", ", ".join(deplist))
         if fields.get("blocked"):
             for blocked in fields.get("blocked"):
                 link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, blocked)
-                blocklist += "[{}]({}), ".format(blocked, link)
-            if blocklist.endswith(', '):
-                blocklist = blocklist[:-2]
-            self.description += markdown_table_row("Blocks", blocklist)
+                blocklist.append("[{}]({})".format(blocked, link))
+            self.description += markdown_table_row("Blocks", ", ".join(blocklist))
         if fields.get("see_also"):
             for see_also in fields.get("see_also"):
                 if CONF.see_also_gerrit_link_base_url in see_also:
                     pattern = CONF.see_also_gerrit_link_base_url + '/c/.*/\+/'
                     gerrit_id = re.sub(pattern, '', see_also)
-                    see_alsolist += "[Gerrit change {}]({}), ".format(gerrit_id, see_also)
+                    see_alsolist.append("[Gerrit change {}]({})".format(gerrit_id, see_also))
                 elif CONF.see_also_git_link_base_url in see_also:
                     pattern = CONF.see_also_git_link_base_url + '/.*id='
                     commit_id = re.sub(pattern, '', see_also)[0:8]
-                    see_alsolist += "[Git commit {}]({}), ".format(commit_id, see_also)
+                    see_alsolist.append("[Git commit {}]({})".format(commit_id, see_also))
                 else:
                     see_also = see_also.replace("{}/show_bug.cgi?id=".format(CONF.bugzilla_base_url),"")
                     link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, see_also)
-                    see_alsolist += "[{}]({}), ".format(see_also, link)
-            if see_alsolist.endswith(', '):
-                see_alsolist = see_alsolist[:-2]
-            self.description += markdown_table_row("See also", see_alsolist)
+                    see_alsolist.append("[{}]({})".format(see_also, link))
+            self.description += markdown_table_row("See also", ", ".join(see_alsolist))
 
     def create_description(self, fields):
         """
