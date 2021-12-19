@@ -187,6 +187,42 @@ class Issue:
 
         self.milestone_id = CONF.gitlab_milestones[milestone]
 
+    def show_related_bugs(self, fields):
+        deplist = ""
+        blocklist = ""
+        see_alsolist = ""
+        if fields.get("dependson"):
+            for depends in fields.get("dependson"):
+                link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, depends)
+                deplist += "[{}]({}) ".format(depends, link)
+            if deplist.endswith(', '):
+                deplist = deplist[:-2]
+            self.description += markdown_table_row("Depends on", deplist)
+        if fields.get("blocked"):
+            for blocked in fields.get("blocked"):
+                link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, blocked)
+                blocklist += "[{}]({}), ".format(blocked, link)
+            if blocklist.endswith(', '):
+                blocklist = blocklist[:-2]
+            self.description += markdown_table_row("Blocks", blocklist)
+        if fields.get("see_also"):
+            for see_also in fields.get("see_also"):
+                if CONF.see_also_gerrit_link_base_url in see_also:
+                    pattern = CONF.see_also_gerrit_link_base_url + '/c/.*/\+/'
+                    gerrit_id = re.sub(pattern, '', see_also)
+                    see_alsolist += "[Gerrit change {}]({}), ".format(gerrit_id, see_also)
+                elif CONF.see_also_git_link_base_url in see_also:
+                    pattern = CONF.see_also_git_link_base_url + '/.*id='
+                    commit_id = re.sub(pattern, '', see_also)[0:8]
+                    see_alsolist += "[Git commit {}]({}), ".format(commit_id, see_also)
+                else:
+                    see_also = see_also.replace("{}/show_bug.cgi?id=".format(CONF.bugzilla_base_url),"")
+                    link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, see_also)
+                    see_alsolist += "[{}]({}), ".format(see_also, link)
+            if see_alsolist.endswith(', '):
+                see_alsolist = see_alsolist[:-2]
+            self.description += markdown_table_row("See also", see_alsolist)
+
     def create_description(self, fields):
         """
         An opinionated description body creator.
@@ -232,40 +268,7 @@ class Issue:
         if CONF.include_arch:
             self.description += markdown_table_row("Architecture", fields.get("rep_platform"))
 
-        deplist = ""
-        blocklist = ""
-        see_alsolist = ""
-        if fields.get("dependson"):
-            for depends in fields.get("dependson"):
-                link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, depends)
-                deplist += "[{}]({}) ".format(depends, link)
-            if deplist.endswith(', '):
-                deplist = deplist[:-2]
-            self.description += markdown_table_row("Depends on", deplist)
-        if fields.get("blocked"):
-            for blocked in fields.get("blocked"):
-                link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, blocked)
-                blocklist += "[{}]({}), ".format(blocked, link)
-            if blocklist.endswith(', '):
-                blocklist = blocklist[:-2]
-            self.description += markdown_table_row("Blocks", blocklist)
-        if fields.get("see_also"):
-            for see_also in fields.get("see_also"):
-                if CONF.see_also_gerrit_link_base_url in see_also:
-                    pattern = CONF.see_also_gerrit_link_base_url + '/c/.*/\+/'
-                    gerrit_id = re.sub(pattern, '', see_also)
-                    see_alsolist += "[Gerrit change {}]({}), ".format(gerrit_id, see_also)
-                elif CONF.see_also_git_link_base_url in see_also:
-                    pattern = CONF.see_also_git_link_base_url + '/.*id='
-                    commit_id = re.sub(pattern, '', see_also)[0:8]
-                    see_alsolist += "[Git commit {}]({}), ".format(commit_id, see_also)
-                else:
-                    see_also = see_also.replace("{}/show_bug.cgi?id=".format(CONF.bugzilla_base_url),"")
-                    link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, see_also)
-                    see_alsolist += "[{}]({}), ".format(see_also, link)
-            if see_alsolist.endswith(', '):
-                see_alsolist = see_alsolist[:-2]
-            self.description += markdown_table_row("See also", see_alsolist)
+        self.show_related_bugs(fields)
 
         # add first comment to the issue description
         attachments = []
@@ -522,10 +525,10 @@ class Comment:
         else:
             self.body += self.fix_comment(fields["thetext"])
 
-        if CONF.dry_run:
-            print ("<--Comment start-->")
-            print (self.body)
-            print ("<--Comment end-->\n")
+#        if CONF.dry_run:
+#            print ("<--Comment start-->")
+#            print (self.body)
+#            print ("<--Comment end-->\n")
 
     def validate(self):
         for field in self.required_fields:
