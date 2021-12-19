@@ -1,35 +1,17 @@
 ---
+#### GENERAL
+
 # If true, don't execute any `put` or `post` requests.
 # dry_run=true still executes get requests though.
 # set to true for debugging or development.
 dry_run: true
 
-# GitLab API base URL without trailing slash
-gitlab_base_url: "https://git.example.com/api/v4"
-
 # Enable TLS certification verification. Disable for local development.
 verify: true
 
-# Auto-generate the issue id in GitLab. If set to `true`, create a GitLab issue with
-# the same id as the Bugzilla ticket number.  The group members which are 
-# mapped in the user mappings need to be defined as project owners for this
-# to work properly. Otherwise the GitLab API will silently ignore the `iid` setting 
-# and fallback to the default behavior (i.e. auto-generate the issue id).
-use_bugzilla_id: false
 
-# Use Bugzilla issue id in GitLab issue title, e.g. "[Bug 12345] Very serious issue"
-use_bugzilla_id_in_title: false
 
-# Either define the GitLab project ID or project name (if ID is specified, name is ignored)
-# The GitLab project id
-gitlab_project_id: 5
-
-gitlab_project_name: "my-namespace/my-projectname"
-
-# The private token of the GitLab Administrator. This program needs GitLab sudo to run.
-# Read more about sudo here:
-# http://docs.gitlab.com/ce/api/#sudo
-gitlab_private_token: "SUPERSECRETTOKEN"
+#### BUGZILLA
 
 # bugzilla base url without trailing slash
 bugzilla_base_url: "https://landfill.bugzilla.org/bugzilla-5.0-branch"
@@ -41,7 +23,7 @@ bugzilla_user:
 bugzilla_password:
 
 # API token is required to access Bugzilla API, if fetch_bugs == true
-bugzilla_api_token: 
+bugzilla_api_token: "secrettoken"
 
 # if true, fetch list of bugs from Bugzilla filtered by product, component, bug_status specified below
 fetch_bugs: false
@@ -61,15 +43,6 @@ max_no_of_bugs: 1000
 # define file to store bug numbers after fetching
 buglist_file: config/bug_list
 
-# Set to true to show datetime in every comment
-show_datetime_in_comments: true
-
-# Set to true to show emails in description and comments
-show_email: false
-
-# The way to format datetime strings in the GitLab issue description and comment body.
-datetime_format_string: "%b %d, %Y %H:%M"
-
 # Generic bugzilla user that bug reporting forms would create bugs as. Performs better formatting for the Issue description
 # Optional
 bugzilla_auto_reporter: "webreporter"
@@ -80,6 +53,40 @@ bugzilla_closed_states:
     - "VERIFIED"
     - "CLOSED"
 
+# Generic/Bot Bugzilla user
+bugzilla_misc_user: "misc@domain.org"
+
+# Auto-generate the issue id in GitLab. If set to `true`, create a GitLab issue with
+# the same id as the Bugzilla ticket number.  The group members which are 
+# mapped in the user mappings need to be defined as project owners for this
+# to work properly. Otherwise the GitLab API will silently ignore the `iid` setting 
+# and fallback to the default behavior (i.e. auto-generate the issue id).
+use_bugzilla_id: false
+
+# Use Bugzilla issue id in GitLab issue title, e.g. "[Bug 12345] Very serious issue"
+use_bugzilla_id_in_title: false
+
+# Set to true to close Bugzilla ticket (CLOSED MOVED) and post a comment with a link to the migrated GitLab issue
+close_bugzilla_bugs: false
+
+
+
+#### GITLAB
+
+# GitLab API base URL without trailing slash
+gitlab_base_url: "https://git.example.com/api/v4"
+
+# Either define the GitLab project ID or project name (if ID is specified, name is ignored)
+# The GitLab project id
+gitlab_project_id: 5
+
+gitlab_project_name: "my-namespace/my-projectname"
+
+# The private token of the GitLab Administrator. This program needs GitLab sudo to run.
+# Read more about sudo here:
+# http://docs.gitlab.com/ce/api/#sudo
+gitlab_private_token: "SUPERSECRETTOKEN"
+
 # Generic gitLab user for misc or old bugzilla users that don't have GitLab accounts
 gitlab_misc_user: "bugzilla"
 
@@ -88,6 +95,22 @@ gitlab_misc_user: "bugzilla"
 default_gitlab_labels:
     - "bugzilla"
     - "legacy"
+
+
+
+#### FEATURES
+
+# Set to true to show datetime in every comment
+show_datetime_in_comments: true
+
+# specify timezone name
+timezone: "EDT"
+
+# Set to true to show emails in description and comments
+show_email: false
+
+# The way to format datetime strings in the GitLab issue description and comment body.
+datetime_format_string: "%b %d, %Y %H:%M"
 
 # Set individual label for bug severity "critical", if no set create/use "critical" as label
 severity_critical_label:
@@ -134,12 +157,6 @@ component_mapping_auto: False
 
 # If the list of groups contains the following group, the issue will be marked as confidential in GitLab
 confidential_group: "Security_Advisories"
-
-# specify timezone name
-timezone: "EDT"
-
-# Set to true to close Bugzilla ticket (CLOSED MOVED) and post a comment with a link to the migrated GitLab issue
-close_bugzilla_bugs: false
 
 # Define Gerrit base URL for see also links
 see_also_gerrit_link_base_url: "https://git.example.com/r"
