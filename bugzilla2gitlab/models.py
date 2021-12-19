@@ -266,6 +266,13 @@ class Issue:
         # add first comment to the issue description
         attachments = []
         to_delete = []
+
+        # deal with empty descriptions
+        if not fields.get("long_desc"):
+            print ("Description is EMPTY!")
+            self.description += "EMPTY DESCRIPTION"
+            return
+
         comment0 = fields["long_desc"][0]
         if fields["reporter"] == comment0["who"] and comment0["thetext"]:
             ext_description += "\n## Description \n"
@@ -306,7 +313,6 @@ class Issue:
                     reporter += " ({})".format(fields["reporter"])
                 self.description += markdown_table_row("Reporter", reporter)
 
-            #self.description += ext_description
             self.description += self.fix_description(ext_description)
 
         if CONF.dry_run:
