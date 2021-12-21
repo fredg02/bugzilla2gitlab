@@ -248,13 +248,14 @@ def validate_list(integer_list):
         )
 
     for i in integer_list:
-        try:
-            int(i)
-        except ValueError:
-            raise Exception(
-                "{} is not able to be parsed as an integer, "
-                "and is therefore an invalid bug id.".format(i)
-            ) from ValueError
+        if i:
+            try:
+                int(i)
+            except ValueError:
+                raise Exception(
+                    "{} is not able to be parsed as an integer, "
+                    "and is therefore an invalid bug id.".format(i)
+                ) from ValueError
 
 def add_user_mapping(file, bugzilla_user, gitlab_user):
     #TODO: create file, if it does not exist yet?

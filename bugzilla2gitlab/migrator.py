@@ -33,7 +33,8 @@ class Migrator:
         validate_list(bug_list)
 
         for bug in bug_list:
-            self.migrate_one(bug)
+            if bug:
+                self.migrate_one(bug)
 
     def migrate_one(self, bugzilla_bug_id):
         """
