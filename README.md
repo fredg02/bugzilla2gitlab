@@ -119,6 +119,33 @@ Further, this tools requires GitLab [sudo](https://docs.gitlab.com/ce/api/#sudo)
 
 If you want to test out this library on a non-production GitLab instance, I recommend starting up a [one-click GitLab droplet from DigitalOcean](https://www.digitalocean.com/features/one-click-apps/gitlab/). From there, you can create a code repository, add some user accounts, and take bugzilla2gitlab for a spin.
 
+## Docker image
+
+If you do not want to mess with Python environments in your local installation, you can use a Docker environment to develop and run bugzilla2gitlab.
+
+- Clone the Git repo: `git clone https://github.com/xmunoz/bugzilla2gitlab.git`
+
+- Build Docker container: `docker build -t test/bugzilla2gitlab docker/`
+
+- Start container:
+    ```
+    docker run --rm -it -v ${PWD}/config:/bugzilla2gitlab/config -v ${PWD}/bugzilla2gitlab:/bugzilla2gitlab test/bugzilla2gitlab bash
+    ```
+    - The Git repo is mapped to directory /bugzilla2gitlab.
+    - The config directory is mapped to /bugzilla2gitlab/config. It should contain the following files:
+        - defaults.yml (copy from tests/test_data/config/defaults.yml and modify)
+        - component_mappings.yml
+        - user_mappings.yml
+        - bugs (optional, if fetch_bugs is not used)
+
+- RUn in container: 
+    ```
+    cd bugzilla2gitlab
+    pip install -r requirements.txt
+    pip install -e .
+    bin/bugzilla2gitlab config/bugs config/
+    ```
+
 ## Contributing
 
 Check out [CONTRIBUTING.md](CONTRIBUTING.md).
