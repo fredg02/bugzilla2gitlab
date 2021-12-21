@@ -143,6 +143,8 @@ def get_bugzilla_bug(bugzilla_url, bug_id):
         for field in bug:
             if field.tag in ("long_desc", "attachment"):
                 new = {}
+                if field.tag == "attachment":
+                    new["isobsolete"] = field.attrib["isobsolete"]
                 for data in field:
                     new[data.tag] = data.text
                     if data.tag == "who":

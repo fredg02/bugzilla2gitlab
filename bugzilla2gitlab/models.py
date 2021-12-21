@@ -31,8 +31,10 @@ class IssueThread:
         """
 
         if fields.get("attachment"):
-            print ("Processing {} attachments...".format(len(fields.get("attachment"))))
+            print ("Processing {} attachment(s)...".format(len(fields.get("attachment"))))
             for attachment_fields in fields["attachment"]:
+                if attachment_fields["isobsolete"] == "1":
+                    print ("Attachment {} is marked as obsolete.".format(attachment_fields["attachid"]))
                 self.attachments[attachment_fields["attachid"]] = Attachment(attachment_fields)
 
         issue_attachment = {}
@@ -296,8 +298,11 @@ class Issue:
                 comment0_text = "\n\n".join(re.split("\n+", comment0["thetext"]))
                 if comment0.get("attachid"):
                     if self.attachment:
-                        self.attachment.save() #upload the attachment!
-                        ext_description += self.attachment.get_markdown(comment0_text)
+                        if not self.attachment.is_obsolete:
+                            self.attachment.save() #upload the attachment!
+                            ext_description += self.attachment.get_markdown(comment0_text)
+                        else:
+                            ext_description += comment0_text
                     else:
                         raise Exception ("No attachment despite attachid!")
                 else:
@@ -516,8 +521,11 @@ class Comment:
         # if this comment is actually an attachment, upload the attachment and add the markdown to the comment body
         if fields.get("attachid"):
             if self.attachment:
-                self.attachment.save() #upload the attachment!
-                self.body += self.attachment.get_markdown(fields["thetext"])
+                if not self.attachment.is_obsolete:
+                    self.attachment.save() #upload the attachment!
+                    self.body += self.attachment.get_markdown(fields["thetext"])
+                else:
+                    self.body += self.fix_comment(fields["thetext"])
             else:
                raise Exception ("No attachment despite attachid!")
         else:
@@ -571,11 +579,13 @@ class Attachment:
     """
 
     def __init__(self, fields):
+        self.is_obsolete = fields["isobsolete"] == "1"
         self.id = fields["attachid"]
         self.file_name = fields["filename"]
         self.file_type = fields["type"]
         self.file_description = fields["desc"]
-        self.file_data = base64.b64decode(fields["data"])
+        if not self.is_obsolete:
+            self.file_data = base64.b64decode(fields["data"])
         self.headers = CONF.default_headers
         self.upload_link = ""
 
@@ -615,6 +625,9 @@ class Attachment:
 
     def save(self):
         url = "{}/projects/{}/uploads".format(CONF.gitlab_base_url, CONF.gitlab_project_id)
+
+        if not self.file_data:
+            raise Exception("Attachment data is empty!")
         f = {"file": (self.file_name, self.file_data)}
         attachment = _perform_request(
             url,
