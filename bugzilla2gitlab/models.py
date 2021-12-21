@@ -291,9 +291,7 @@ class Issue:
                 del fields["long_desc"][i]
 
             if attachments:
-                self.description += markdown_table_row(
-                    "Attachments", ", ".join(attachments)
-                )
+                self.description += markdown_table_row("Attachments", ", ".join(attachments))
 
             if ext_description:
                 # for situations where the reporter is a generic or old user, specify the original
@@ -330,10 +328,12 @@ class Issue:
         Fetches attachments from comment if authored by reporter.
         """
         if comment.get("attachid") and comment.get("who") == reporter:
-            filename = Attachment.parse_file_description(comment.get("thetext"))
-            attachment_markdown = Attachment(comment.get("attachid"), filename).save()
-            attachments.append(attachment_markdown)
-            return True
+            action = Attachment.parse_attachment_action(comment.get("thetext"))
+            if action == "created":
+                filename = Attachment.parse_file_description(comment.get("thetext"))
+                attachment_markdown = Attachment(comment.get("attachid"), filename).save()
+                attachments.append(attachment_markdown)
+                return True
         return False
 
     def validate(self):
@@ -513,16 +513,20 @@ class Comment:
         # if this comment is actually an attachment, upload the attachment and add the
         # markdown to the comment body
         if fields.get("attachid"):
-            filename = Attachment.parse_file_description(fields["thetext"])
-            attachment_markdown = Attachment(fields["attachid"], filename).save()
+            action = Attachment.parse_attachment_action(fields["thetext"])
+            if action == "created":
+                filename = Attachment.parse_file_description(fields["thetext"])
+                attachment_markdown = Attachment(fields["attachid"], filename).save()
+            elif action == "comment":
+                attachment_markdown = self.fix_comment(fields["thetext"])
             self.body += attachment_markdown
         else:
             self.body += self.fix_comment(fields["thetext"])
 
-#        if CONF.dry_run:
-#            print ("<--Comment start-->")
-#            print (self.body)
-#            print ("<--Comment end-->\n")
+        if CONF.dry_run:
+            print ("<--Comment start-->")
+            print (self.body)
+            print ("<--Comment end-->\n")
 
     def validate(self):
         for field in self.required_fields:
@@ -572,6 +576,20 @@ class Attachment:
         self.headers = CONF.default_headers
 
     @classmethod
+    def parse_attachment_action(cls, comment):
+        #TODO: simplify with single regexp?
+        regex_created = r"^Created attachment.*"
+        regex_comment = r"^Comment on attachment.*"
+        matches_created = re.match(regex_created, comment, flags=re.M)
+        matches_comment = re.match(regex_comment, comment, flags=re.M)
+        if matches_created:
+            return "created"
+        elif matches_comment:
+            return "comment"
+        else:
+            raise Exception("Failed to match action of attachment comment: {}".format(comment))
+
+    @classmethod
     def parse_file_description(cls, comment):
         regex = r"^Created attachment (\d*)\s?(.*)$"
         matches = re.match(regex, comment, flags=re.M)
@@ -619,9 +637,7 @@ class Attachment:
         result = _perform_request(url, "get", json=False, verify=CONF.verify)
         filename = self.parse_file_name(result.headers)
 
-        url = "{}/projects/{}/uploads".format(
-            CONF.gitlab_base_url, CONF.gitlab_project_id
-        )
+        url = "{}/projects/{}/uploads".format(CONF.gitlab_base_url, CONF.gitlab_project_id)
         f = {"file": (filename, result.content)}
         attachment = _perform_request(
             url,
