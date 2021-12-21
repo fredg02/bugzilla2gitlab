@@ -1,4 +1,4 @@
-import re, json
+import re, json, base64
 
 from .utils import _perform_request, format_datetime, format_utc, markdown_table_row, add_user_mapping, is_admin, set_admin_permission
 from .config import _get_user_id
@@ -21,8 +21,8 @@ class IssueThread:
         Load the issue object and the comment objects.
         If CONF.dry_run=False, then Attachments are created in GitLab in this step.
         """
-        self.issue = Issue(fields)
         self.comments = []
+        self.attachments = {}
         """
         fields["long_desc"] gets peared down in Issue creation (above). This is because bugzilla
         lacks the concept of an issue description, so the first comment is harvested for
@@ -30,9 +30,24 @@ class IssueThread:
         from the original reporter. What remains below should be a list of genuine comments.
         """
 
+        if fields.get("attachment"):
+            print ("Processing {} attachments...".format(len(fields.get("attachment"))))
+            for attachment_fields in fields["attachment"]:
+                self.attachments[attachment_fields["attachid"]] = Attachment(attachment_fields)
+
+        issue_attachment = {}
+        if fields.get("long_desc"):
+            comment0 = fields.get("long_desc")[0]
+            if comment0.get("attachid"):
+                issue_attachment = self.attachments.get(comment0.get("attachid"))
+        self.issue = Issue(fields, issue_attachment)
+
         for comment_fields in fields["long_desc"]:
             if comment_fields.get("thetext"):
-                self.comments.append(Comment(comment_fields))
+                attachment = {}
+                if comment_fields.get("attachid"):
+                    attachment = self.attachments.get(comment_fields.get("attachid"))
+                self.comments.append(Comment(comment_fields, attachment))
 
     def save(self):
         """
@@ -71,10 +86,11 @@ class Issue:
         "confidential"
     ]
 
-    def __init__(self, bugzilla_fields):
+    def __init__(self, bugzilla_fields, attachment=None):
         self.headers = CONF.default_headers
         validate_user(bugzilla_fields["reporter"])
         validate_user(bugzilla_fields["assigned_to"])
+        self.attachment = attachment
         self.load_fields(bugzilla_fields)
 
     def load_fields(self, fields):
@@ -277,21 +293,20 @@ class Issue:
             comment0 = fields["long_desc"][0]
             if fields["reporter"] == comment0["who"] and comment0["thetext"]:
                 ext_description += "\n## Description \n"
-                ext_description += "\n\n".join(re.split("\n+", comment0["thetext"]))
-                self.update_attachments(fields["reporter"], comment0, attachments)
+                comment0_text = "\n\n".join(re.split("\n+", comment0["thetext"]))
+                if comment0.get("attachid"):
+                    if self.attachment:
+                        self.attachment.save() #upload the attachment!
+                        ext_description += self.attachment.get_markdown(comment0_text)
+                    else:
+                        raise Exception ("No attachment despite attachid!")
+                else:
+                    ext_description += comment0_text
                 del fields["long_desc"][0]
-
-            for i in range(0, len(fields["long_desc"])):
-                comment = fields["long_desc"][i]
-                if self.update_attachments(fields["reporter"], comment, attachments):
-                    to_delete.append(i)
 
             # delete comments that have already added to the issue description
             for i in reversed(to_delete):
                 del fields["long_desc"][i]
-
-            if attachments:
-                self.description += markdown_table_row("Attachments", ", ".join(attachments))
 
             if ext_description:
                 # for situations where the reporter is a generic or old user, specify the original
@@ -322,19 +337,6 @@ class Issue:
         text = find_bug_links(text)
         text = escape_hashtags(text)
         return text
-
-    def update_attachments(self, reporter, comment, attachments):
-        """
-        Fetches attachments from comment if authored by reporter.
-        """
-        if comment.get("attachid") and comment.get("who") == reporter:
-            action = Attachment.parse_attachment_action(comment.get("thetext"))
-            if action == "created":
-                filename = Attachment.parse_file_description(comment.get("thetext"))
-                attachment_markdown = Attachment(comment.get("attachid"), filename).save()
-                attachments.append(attachment_markdown)
-                return True
-        return False
 
     def validate(self):
         for field in self.required_fields:
@@ -452,8 +454,9 @@ class Comment:
     required_fields = ["sudo", "body", "issue_id"]
     data_fields = ["created_at", "body"]
 
-    def __init__(self, bugzilla_fields):
+    def __init__(self, bugzilla_fields, attachment=None):
         self.headers = CONF.default_headers
+        self.attachment = attachment
         validate_user(bugzilla_fields["who"])
         self.load_fields(bugzilla_fields)
 
@@ -495,7 +498,7 @@ class Comment:
 
     def load_fields(self, fields):
         self.sudo = CONF.gitlab_users[CONF.bugzilla_users[fields["who"]]] # GitLab user ID
-        # if unable to comment as the original user, put username in comment body
+        # if unable to comment as the original user, put user name in comment body
         self.created_at = format_utc(fields["bug_when"])
         self.body = ""
         if CONF.bugzilla_users[fields["who"]] == CONF.gitlab_misc_user and fields["who"] != CONF.bugzilla_misc_user:
@@ -510,16 +513,13 @@ class Comment:
             self.body += format_datetime(fields["bug_when"], CONF.datetime_format_string)
             self.body += "\n\n"
 
-        # if this comment is actually an attachment, upload the attachment and add the
-        # markdown to the comment body
+        # if this comment is actually an attachment, upload the attachment and add the markdown to the comment body
         if fields.get("attachid"):
-            action = Attachment.parse_attachment_action(fields["thetext"])
-            if action == "created":
-                filename = Attachment.parse_file_description(fields["thetext"])
-                attachment_markdown = Attachment(fields["attachid"], filename).save()
-            elif action == "comment":
-                attachment_markdown = self.fix_comment(fields["thetext"])
-            self.body += attachment_markdown
+            if self.attachment:
+                self.attachment.save() #upload the attachment!
+                self.body += self.attachment.get_markdown(fields["thetext"])
+            else:
+               raise Exception ("No attachment despite attachid!")
         else:
             self.body += self.fix_comment(fields["thetext"])
 
@@ -570,49 +570,14 @@ class Attachment:
     The attachment model
     """
 
-    def __init__(self, bugzilla_attachment_id, file_description):
-        self.id = bugzilla_attachment_id
-        self.file_description = file_description
+    def __init__(self, fields):
+        self.id = fields["attachid"]
+        self.file_name = fields["filename"]
+        self.file_type = fields["type"]
+        self.file_description = fields["desc"]
+        self.file_data = base64.b64decode(fields["data"])
         self.headers = CONF.default_headers
-
-    @classmethod
-    def parse_attachment_action(cls, comment):
-        #TODO: simplify with single regexp?
-        regex_created = r"^Created attachment.*"
-        regex_comment = r"^Comment on attachment.*"
-        matches_created = re.match(regex_created, comment, flags=re.M)
-        matches_comment = re.match(regex_comment, comment, flags=re.M)
-        if matches_created:
-            return "created"
-        elif matches_comment:
-            return "comment"
-        else:
-            raise Exception("Failed to match action of attachment comment: {}".format(comment))
-
-    @classmethod
-    def parse_file_description(cls, comment):
-        regex = r"^Created attachment (\d*)\s?(.*)$"
-        matches = re.match(regex, comment, flags=re.M)
-        if not matches:
-            raise Exception("Failed to match comment string: {}".format(comment))
-        return matches.group(2)
-
-    def parse_file_name(self, headers):
-        # Use real filename to store attachment but descriptive name for issue text
-        if "Content-disposition" not in headers:
-            raise Exception(
-                u"No file name returned for attachment {}".format(self.file_description)
-            )
-        # Content-disposition: application/zip; filename="mail_route.zip"
-        regex = r"^.*; filename=\"(.*)\"$"
-        matches = re.match(regex, headers["Content-disposition"], flags=re.M)
-        if not matches:
-            raise Exception(
-                "Failed to match file name for string: {}".format(
-                    headers["Content-disposition"]
-                )
-            )
-        return matches.group(1)
+        self.upload_link = ""
 
     def parse_upload_link(self, attachment):
         if not (attachment and attachment["markdown"]):
@@ -632,13 +597,25 @@ class Attachment:
             )
         return matches.group(1)
 
-    def save(self):
-        url = "{}/attachment.cgi?id={}".format(CONF.bugzilla_base_url, self.id)
-        result = _perform_request(url, "get", json=False, verify=CONF.verify)
-        filename = self.parse_file_name(result.headers)
+    def get_markdown(self, comment):
+        comment = re.sub(r"(attachment\s\d*)", u"[\\1]({})".format(self.upload_link), comment)
+        thumbnail_size = "150"
+        if self.file_type.startswith("image"):
+            comment += "\n\n<img src=\"{}\" width=\"{}\" alt=\"{}\">\\\n{}".format(self.upload_link, thumbnail_size, self.file_name, self.file_name)
+        else:
+            comment += "\n\n"
+            if self.file_type.startswith("text"):
+                comment += ":notepad_spiral: " 
+            elif "zip" in self.file_type or "7z" in self.file_type or "rar" in self.file_type or "tar" in self.file_type:
+                comment += ":compression: "
+            elif self.file_type == "application/octet-stream" and self.file_name.endswith(".zip"):
+                comment += ":compression: "
+            comment += u"[{}]({})".format(self.file_name, self.upload_link)
+        return comment
 
+    def save(self):
         url = "{}/projects/{}/uploads".format(CONF.gitlab_base_url, CONF.gitlab_project_id)
-        f = {"file": (filename, result.content)}
+        f = {"file": (self.file_name, self.file_data)}
         attachment = _perform_request(
             url,
             "post",
@@ -649,13 +626,10 @@ class Attachment:
             verify=CONF.verify,
         )
         # For dry run, nothing is uploaded, so upload link is faked just to let the process continue
-        upload_link = (
-            self.file_description
-            if CONF.dry_run
-            else self.parse_upload_link(attachment)
-        )
-
-        return u"[{}]({})".format(self.file_description, upload_link)
+        if CONF.dry_run:
+            self.upload_link = "/dry-run/upload-link"
+        else:
+            self.upload_link = self.parse_upload_link(attachment)
 
 #TODO: move method to utils.py? => CONF is not defined in utils.py
 def _get_gitlab_user_by_email(email):
