@@ -285,11 +285,7 @@ class Issue:
         to_delete = []
 
         # deal with empty descriptions
-        if not fields.get("long_desc"):
-            print ("Description is EMPTY!")
-            self.description += "\n## Description \n"
-            self.description += "EMPTY DESCRIPTION"
-        else:
+        if fields.get("long_desc"):
             comment0 = fields["long_desc"][0]
             if fields["reporter"] == comment0["who"] and comment0["thetext"]:
                 ext_description += "\n## Description \n"
@@ -329,8 +325,12 @@ class Issue:
                     if CONF.show_email:
                         reporter += " ({})".format(fields["reporter"])
                     self.description += markdown_table_row("Reporter", reporter)
-    
+
                 self.description += self.fix_description(ext_description)
+        else:
+            print ("Description is EMPTY!")
+            self.description += "\n## Description \n"
+            self.description += "EMPTY DESCRIPTION"
 
         if CONF.dry_run:
             print (self.description)
