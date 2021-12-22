@@ -230,9 +230,12 @@ class Issue:
                     commit_id = re.sub(pattern, '', see_also)[0:8]
                     see_alsolist.append("[Git commit {}]({})".format(commit_id, see_also))
                 else:
-                    see_also = see_also.replace("{}/show_bug.cgi?id=".format(CONF.bugzilla_base_url),"")
-                    link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, see_also)
-                    see_alsolist.append("[{}]({})".format(see_also, link))
+                    if CONF.bugzilla_base_url in see_also:
+                        see_also = see_also.replace("{}/show_bug.cgi?id=".format(CONF.bugzilla_base_url),"")
+                        link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, see_also)
+                        see_alsolist.append("[{}]({})".format(see_also, link))
+                    else:
+                        see_alsolist.append(see_also)
             self.description += markdown_table_row("See also", ", ".join(see_alsolist))
 
     def create_description(self, fields):
