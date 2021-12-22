@@ -296,7 +296,7 @@ class Issue:
                             self.attachment.save() #upload the attachment!
                             ext_description += self.attachment.get_markdown(comment0_text)
                         else:
-                            ext_description += comment0_text
+                            ext_description += re.sub(r"(attachment\s\d*)", "~~\\1~~ (attachment deleted)", comment0_text)
                     else:
                         raise Exception ("No attachment despite attachid!")
                 else:
@@ -508,7 +508,7 @@ class Comment:
                     self.attachment.save() #upload the attachment!
                     self.body += self.attachment.get_markdown(fields["thetext"])
                 else:
-                    self.body += self.fix_comment(fields["thetext"])
+                    self.body += self.fix_comment(re.sub(r"(attachment\s\d*)", "~~\\1~~ (attachment deleted)", fields["thetext"]))
             else:
                raise Exception ("No attachment despite attachid!")
         else:
