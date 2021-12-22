@@ -248,9 +248,7 @@ class Issue:
         if CONF.include_bugzilla_link:
             bug_id = fields["bug_id"]
             link = "{}/show_bug.cgi?id={}".format(CONF.bugzilla_base_url, bug_id)
-            self.description += markdown_table_row(
-                "Bugzilla Link", "[{}]({})".format(bug_id, link)
-            )
+            self.description += markdown_table_row("Bugzilla Link", "[{}]({})".format(bug_id, link))
 
         if fields.get("bug_status"):
             status = fields["bug_status"]
@@ -295,7 +293,7 @@ class Issue:
             comment0 = fields["long_desc"][0]
             if fields["reporter"] == comment0["who"] and comment0["thetext"]:
                 ext_description += "\n## Description \n"
-                comment0_text = "\n\n".join(re.split("\n+", comment0["thetext"]))
+                comment0_text = fix_newlines(comment0["thetext"])
                 if comment0.get("attachid"):
                     if self.attachment:
                         if not self.attachment.is_obsolete:
@@ -479,26 +477,11 @@ class Comment:
             out = out.rstrip()
         return out
 
-    def fix_newlines(self, text):
-        # fix line breaks in markdown syntax
-        out = ""
-        split_list = text.split('\n')
-        for index, line in enumerate(split_list):
-            if index < len(split_list)-1:
-                next_line = split_list[index+1]
-                if (len(line) > 0 and len(next_line) > 0 and not next_line.startswith('>')) or (line.startswith('>') and len(next_line) > 0):
-                   out += line + '\\\n'
-                else:
-                   out += line + '\n'
-        else:
-            out += line
-        return out
-
     def fix_comment(self, text):
         text = escape_hashtags(text)
         text = find_bug_links(text)
         text = self.fix_quotes(text)
-        text = self.fix_newlines(text)
+        text = fix_newlines(text)
         return text
 
     def load_fields(self, fields):
@@ -682,6 +665,21 @@ def validate_user(bugzilla_user):
                 "No matching GitLab user found for Bugzilla user `{}` "
                 "Please add them before continuing.".format(bugzilla_user)
             )
+
+def fix_newlines(text):
+    # fix line breaks in markdown syntax
+    out = ""
+    split_list = text.split('\n')
+    for index, line in enumerate(split_list):
+        if index < len(split_list)-1:
+            next_line = split_list[index+1]
+            if (len(line) > 0 and len(next_line) > 0 and not next_line.startswith('>')) or (line.startswith('>') and len(next_line) > 0):
+               out += line + '\\\n'
+            else:
+               out += line + '\n'
+    else:
+        out += line
+    return out
 
 def create_link(match_obj):
     if match_obj.group(4) is not None:
