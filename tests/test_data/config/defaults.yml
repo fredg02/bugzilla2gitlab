@@ -4,7 +4,10 @@
 # If true, don't execute any `put` or `post` requests.
 # dry_run=true still executes get requests though.
 # set to true for debugging or development.
-dry_run: true
+dry_run: True
+
+# Allows to read test xml files from test_xmls directory
+test_mode: False
 
 # Enable TLS certification verification. Disable for local development.
 verify: true

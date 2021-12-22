@@ -57,7 +57,8 @@ Config = namedtuple(
         "unassign_list",
         "close_bugzilla_bugs",
         "see_also_gerrit_link_base_url",
-        "see_also_git_link_base_url"
+        "see_also_git_link_base_url",
+        "test_mode"
         
     ],
 )

@@ -124,11 +124,27 @@ def save_bug_list(buglist, file):
         buglist_file.write("{}\n".format(bug))
     buglist_file.close()
 
+def load_bugzilla_bug(file):
+    """
+    Read bug XML, return all fields and values in a dictionary.
+    """
+    bug_fields = {}
+    if os.path.exists(file):
+        xml_file = open(file, "r")
+        bug_fields = parse_bug_fields(xml_file.read())
+        xml_file.close()
+    else:
+        raise Exception ("File {} not found!".format(file))
+    return bug_fields
+
 def get_bugzilla_bug(bugzilla_url, bug_id):
     """
     Read bug XML, return all fields and values in a dictionary.
     """
     bug_xml = _fetch_bug_content(bugzilla_url, bug_id)
+    return parse_bug_fields(bug_xml)
+
+def parse_bug_fields(bug_xml):
     tree = ElementTree.fromstring(bug_xml)
 
     bug_fields = {

@@ -1,6 +1,7 @@
+import os
 from .config import get_config
 from .models import IssueThread
-from .utils import bugzilla_login, get_bugzilla_bug, validate_list, fetch_bug_list, save_bug_list
+from .utils import bugzilla_login, get_bugzilla_bug, load_bugzilla_bug, validate_list, fetch_bug_list, save_bug_list
 
 
 class Migrator:
@@ -32,9 +33,25 @@ class Migrator:
 
         validate_list(bug_list)
 
-        for bug in bug_list:
-            if bug:
-                self.migrate_one(bug)
+        if self.conf.test_mode:
+            print ("### TEST MODE ###")
+            test_dir = os.path.join(self.conf.config_path, "test_xmls")
+            for file in os.listdir(test_dir):
+                if file.endswith(".xml"):
+                    self.migrate_one_file(os.path.join(test_dir, file))
+        else:
+            for bug in bug_list:
+                if bug:
+                    self.migrate_one(bug)
+
+    def migrate_one_file(self, file):
+        """
+        Migrate a single bug from Bugzilla to GitLab. TEST MODE
+        """
+        print("Migrating file {}".format(file))
+        fields = load_bugzilla_bug(file)
+        issue_thread = IssueThread(self.conf, fields)
+        issue_thread.save()
 
     def migrate_one(self, bugzilla_bug_id):
         """
