@@ -242,10 +242,12 @@ def set_admin_permission(url, id, admin, headers):
 
 def is_admin(url, id, headers):
     response = get_gitlab_user(url, id, headers)
-    if response.get("is_admin"):
+    # FIXME
+    if response.get("is_admin") is not None:
         return response["is_admin"]
     else:
         print ("ERROR: is_admin was not found in response.")
+        print (json.dumps(response, indent=4))
 
 def get_gitlab_user(url, id, headers):
     url = "{}/users/{}".format(url, id)
