@@ -292,7 +292,7 @@ class Issue:
             comment0 = fields["long_desc"][0]
             if fields["reporter"] == comment0["who"] and comment0["thetext"]:
                 ext_description += "\n## Description \n"
-                comment0_text = fix_newlines(comment0["thetext"])
+                comment0_text = comment0["thetext"]
                 if comment0.get("attachid"):
                     if self.attachment:
                         if not self.attachment.is_obsolete:
@@ -306,7 +306,7 @@ class Issue:
                     ext_description += comment0_text
                 del fields["long_desc"][0]
 
-            # delete comments that have already added to the issue description
+            # delete comments that have already been added to the issue description
             for i in reversed(to_delete):
                 del fields["long_desc"][i]
 
@@ -342,6 +342,7 @@ class Issue:
     def fix_description(self, text):
         text = find_bug_links(text)
         text = escape_hashtags(text)
+        text = fix_newlines(text)
         return text
 
     def validate(self):
@@ -673,13 +674,17 @@ def fix_newlines(text):
     # fix line breaks in markdown syntax
     out = ""
     split_list = text.split('\n')
+    nl = re.compile('^\d*\.') # regex pattern to match numbered list
     for index, line in enumerate(split_list):
         if index < len(split_list)-1:
             next_line = split_list[index+1]
-            if (len(line) > 0 and len(next_line) > 0 and not next_line.startswith('>')) or (line.startswith('>') and len(next_line) > 0):
-               out += line + '\\\n'
+            if len(line) > 0 and len(next_line) > 0:
+                if not next_line.startswith(('> ','* ','- ','#')) and not line.startswith('#') and not nl.match(next_line):
+                    out += line + '\\\n'
+                else:
+                    out += line + '\n'
             else:
-               out += line + '\n'
+                out += line + '\n'
     else:
         out += line
     return out
