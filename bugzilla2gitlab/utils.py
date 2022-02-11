@@ -91,6 +91,7 @@ def fetch_bug_list(bugzilla_url, bugzilla_api_token, product, components, status
     #print (status_filter)
     components_list = ""
     for component in components:
+        component = component.replace("&", "%26") #quickfix to deal with ampersands in component names
         components_list += "&component={}".format(component)
 
     url = "{}/rest/bug?product={}{}{}&api_key={}".format(bugzilla_url, product, components_list, status_filter, bugzilla_api_token)
@@ -241,7 +242,7 @@ def set_admin_permission(url, id, admin, headers):
 
 def is_admin(url, id, headers):
     response = get_gitlab_user(url, id, headers)
-    if "is_admin" in response:
+    if response.get("is_admin"):
         return response["is_admin"]
     else:
         print ("ERROR: is_admin was not found in response.")
