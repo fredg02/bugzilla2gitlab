@@ -674,7 +674,7 @@ def fix_newlines(text):
     # fix line breaks in markdown syntax
     out = ""
     split_list = text.split('\n')
-    nl = re.compile('^\d*\.') # regex pattern to match numbered list
+    nl = re.compile('^\d*[\.\)]') # regex pattern to match numbered list
     for index, line in enumerate(split_list):
         if index < len(split_list)-1:
             next_line = split_list[index+1]
