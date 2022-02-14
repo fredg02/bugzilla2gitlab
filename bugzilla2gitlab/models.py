@@ -683,7 +683,7 @@ def fix_newlines(text):
         if index < len(split_list)-1:
             next_line = split_list[index+1]
             if len(line) > 0 and len(next_line) > 0:
-                if not next_line.startswith(('> ','* ','- ','#')) and not line.startswith('#') and not nl.match(next_line):
+                if not next_line.strip().startswith(('> ','* ','- ','#')) and not line.strip().startswith('#') and not nl.match(next_line.strip()):
                     out += line + '\\\n'
                 else:
                     out += line + '\n'
