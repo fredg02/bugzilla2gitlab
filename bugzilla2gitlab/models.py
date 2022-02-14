@@ -430,6 +430,10 @@ class Issue:
         # set status to CLOSED MOVED and post comment at the same time
         # PUT /rest/bug/(id_or_alias)
 
+        if CONF.dry_run:
+            print ("Bugzilla issue has been closed (DRY-RUN MODE).\n")
+            return
+
         # TODO: works only with CONF.gitlab_project_name (otherwise an extra look-up is required)
         gitlab_url = CONF.gitlab_base_url.replace('api/v4','')
         issue_in_gitlab = "{}{}/-/issues/{}".format(gitlab_url, CONF.gitlab_project_name, self.id)
