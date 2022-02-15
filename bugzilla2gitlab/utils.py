@@ -244,6 +244,7 @@ def is_admin(url, id, headers):
     response = get_gitlab_user(url, id, headers)
     # FIXME
     if response.get("is_admin") is not None:
+        #print ("is_admin: {}".format(response.get("is_admin")))
         return response["is_admin"]
     else:
         print ("ERROR: is_admin was not found in response.")
