@@ -450,6 +450,12 @@ class Issue:
         #print (json.dumps(data, indent=4))
 
         url = "{}/rest/bug/{}?api_key={}".format(CONF.bugzilla_base_url, self.bug_id, CONF.bugzilla_api_token)
+
+        #Head request to avoid 'Remote end closed connection without response' (most likely due to race-condition with "Keep-Alive" option set on server)
+        response_head = _perform_request(url, "head", json=False)
+        print ("Head-Response:")
+        print (response_head)
+
         response = _perform_request(url, "put", data=json_data, headers={"Content-Type": "application/json"}, json=True)
         if response.get("error"):
             print ("Response:")
