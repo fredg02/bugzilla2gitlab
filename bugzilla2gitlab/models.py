@@ -608,7 +608,7 @@ class Attachment:
         comment = re.sub(r"(attachment\s\d*)", u"[\\1]({})".format(self.upload_link), comment)
         thumbnail_size = "150"
         if self.file_type.startswith("image"):
-            comment += "\n\n<img src=\"{}\" width=\"{}\" alt=\"{}\">\\\n{}".format(self.upload_link, thumbnail_size, self.file_name, self.file_name)
+            comment += "\n\n<img src=\"{}\" width=\"{}\" alt=\"{}\">\n\n{}".format(self.upload_link, thumbnail_size, self.file_name, self.file_name)
         else:
             comment += "\n\n"
             if self.file_type.startswith("text"):
