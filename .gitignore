@@ -63,3 +63,5 @@ target/
 # virtualenv
 venv/
 ENV/
+/python_tests/
+/config/
