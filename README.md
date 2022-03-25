@@ -10,6 +10,10 @@
 - [Demo](#demo)
 - [Contributing](#contributing)
 
+| About this fork |
+| ---- |
+| This fork is based on https://github.com/xmunoz/bugzilla2gitlab and the great work of [@xmunoz](https://github.com/xmunoz). It was adapted and improved to migrate bugs from https://bugs.eclipse.org to https://gitlab.eclipse.org. A list of the changes can be found here: [CHANGELOG.md](CHANGELOG.md) |
+
 ## Introduction
 
 This is a tool for developers or admins who want to migrate the issue management for their software project from Bugzilla to GitLab Issues. Here is a screenshot of an issue created by bugzilla2gitlab:
@@ -123,7 +127,7 @@ If you want to test out this library on a non-production GitLab instance, I reco
 
 If you do not want to mess with Python environments in your local installation, you can use a Docker environment to develop and run bugzilla2gitlab.
 
-- Clone the Git repo: `git clone https://github.com/xmunoz/bugzilla2gitlab.git`
+- Clone the Git repo: `git clone https://github.com/fredg02/bugzilla2gitlab.git`
 
 - Build Docker container: `docker build -t test/bugzilla2gitlab docker/`
 
@@ -138,7 +142,7 @@ If you do not want to mess with Python environments in your local installation, 
         - user_mappings.yml
         - bugs (optional, if fetch_bugs is not used)
 
-- RUn in container: 
+- Run in container: 
     ```
     cd bugzilla2gitlab
     pip install -r requirements.txt
