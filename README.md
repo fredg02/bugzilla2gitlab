@@ -129,25 +129,26 @@ If you do not want to mess with Python environments in your local installation, 
 
 - Clone the Git repo: `git clone https://github.com/fredg02/bugzilla2gitlab.git`
 
-- Build Docker container: `docker build -t test/bugzilla2gitlab docker/`
+- Build Docker image: `./build_image.sh`
 
-- Start container:
+- Run bugzilla2gitlab in container:
     ```
-    docker run --rm -it -v ${PWD}/config:/bugzilla2gitlab/config -v ${PWD}/bugzilla2gitlab:/bugzilla2gitlab test/bugzilla2gitlab bash
+    run_container.sh
     ```
-    - The Git repo is mapped to directory /bugzilla2gitlab.
+    - The Git repo is mapped to the directory /bugzilla2gitlab inside the container
     - The config directory is mapped to /bugzilla2gitlab/config. It should contain the following files:
         - defaults.yml (copy from tests/test_data/config/defaults.yml and modify)
         - component_mappings.yml
         - user_mappings.yml
         - bugs (optional, if fetch_bugs is not used)
 
-- Run in container: 
+- Alternatively, you can start the container with:
     ```
-    cd bugzilla2gitlab
-    pip install -r requirements.txt
-    pip install -e .
-    bin/bugzilla2gitlab config/bugs config/
+    start_container.sh
+    ```
+    and inside it, run
+    ```
+    bin/bugzilla2gitlab
     ```
 
 ## Contributing
