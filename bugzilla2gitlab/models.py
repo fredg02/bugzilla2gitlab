@@ -1,4 +1,4 @@
-import re, json, base64
+import re, json, base64, logging
 
 from .utils import _perform_request, format_datetime, format_utc, markdown_table_row, add_user_mapping, is_admin, set_admin_permission
 from .config import _get_user_id
@@ -31,10 +31,10 @@ class IssueThread:
         """
 
         if fields.get("attachment"):
-            print ("Processing {} attachment(s)...".format(len(fields.get("attachment"))))
+            logging.info("Processing {} attachment(s)...".format(len(fields.get("attachment"))))
             for attachment_fields in fields["attachment"]:
                 if attachment_fields["isobsolete"] == "1":
-                    print ("Attachment {} is marked as obsolete.".format(attachment_fields["attachid"]))
+                    logging.info("Attachment {} is marked as obsolete.".format(attachment_fields["attachid"]))
                 self.attachments[attachment_fields["attachid"]] = Attachment(attachment_fields)
 
         issue_attachment = {}
@@ -101,15 +101,15 @@ class Issue:
         else:
             self.title = fields["short_desc"]
         if CONF.dry_run:
-          print ("Bug title: {}".format(self.title))
+          logging.info("Bug title: {}".format(self.title))
         self.sudo = CONF.gitlab_users[CONF.bugzilla_users[fields["reporter"]]]
 
         if fields["assigned_to"] in CONF.unassign_list:
             self.assignee_ids = ""
-            print ("Found match in unassign_list, assigning issue to no one!")
+            logging.info("Found match in unassign_list, assigning issue to no one!")
         else:
             self.assignee_ids = [CONF.gitlab_users[CONF.bugzilla_users[fields["assigned_to"]]]]
-            print ("Assigning issue to {}".format(CONF.bugzilla_users[fields["assigned_to"]]))
+            logging.info("Assigning issue to {}".format(CONF.bugzilla_users[fields["assigned_to"]]))
 
         self.created_at = format_utc(fields["creation_ts"])
         self.status = fields["bug_status"]
@@ -117,7 +117,7 @@ class Issue:
         #set confidential
         if fields.get("group"):
             if fields["group"] == CONF.confidential_group:
-               print ("Confidential group flag is set. Will mark issue as confidential!")
+               logging.info("Confidential group flag is set. Will mark issue as confidential!")
                self.confidential = True
 
         self.create_labels(
@@ -148,7 +148,7 @@ class Issue:
             else:
                 raise Exception("No component mapping found for '{}'".format(component))
 
-        print ("Assigning component label: {}...".format(component_label))
+        logging.info("Assigning component label: {}...".format(component_label))
 
         if component_label:
             labels.append(component_label)
@@ -176,11 +176,11 @@ class Issue:
                     severity_label = CONF.severity_blocker_label
                 else:
                     severity_label = severity
-                print ("Found severity '{}'. Assigning label: '{}'...".format(severity, severity_label))
+                logging.info("Found severity '{}'. Assigning label: '{}'...".format(severity, severity_label))
                 labels.append(severity_label)
 
         if spam and spam.lower() == "spam":
-           print ("Found keyword spam in whiteboard field! Assigning label...")
+           logging.info("Found keyword spam in whiteboard field! Assigning label...")
            labels.append("spam")
 
         self.labels = ",".join(labels)
@@ -190,7 +190,7 @@ class Issue:
         Looks up milestone id given its title or creates a new one.
         """
         if milestone not in CONF.gitlab_milestones:
-            print("Create milestone: {}".format(milestone))
+            logging.info("Create milestone: {}".format(milestone))
             url = "{}/projects/{}/milestones".format(
                 CONF.gitlab_base_url, CONF.gitlab_project_id
             )
@@ -336,13 +336,13 @@ class Issue:
 
                 self.description += self.fix_description(ext_description)
         else:
-            print ("Description is EMPTY!")
+            logging.info("Description is EMPTY!")
             self.description += "\n## Description \n"
             self.description += "EMPTY DESCRIPTION"
 
         if CONF.dry_run:
-            print (self.description)
-            print ("\n")
+            logging.info(self.description)
+            logging.info("\n")
 
     def fix_description(self, text):
         text = find_bug_links(text)
@@ -365,14 +365,14 @@ class Issue:
         data = {k: v for k, v in self.__dict__.items() if k in self.data_fields}
 
         if CONF.use_bugzilla_id is True:
-            print("Using original issue id")
+            logging.info("Using original issue id")
             data["iid"] = self.bug_id
 
         if not CONF.dry_run:
             admin_status_issue = is_admin(CONF.gitlab_base_url, self.sudo, CONF.default_headers)
 
             if admin_status_issue is not None and not admin_status_issue:
-                print ("")
+                logging.info("")
                 response = set_admin_permission(CONF.gitlab_base_url, self.sudo, True, CONF.default_headers)
 
         self.headers["sudo"] = self.sudo
@@ -394,11 +394,12 @@ class Issue:
 
         self.id = response["iid"]
         print("Created issue with id: {}".format(self.id))
+        logging.info("Created issue with id: {}".format(self.id))
 
         #TODO: make sure this is always set, even if there is an exception
         if admin_status_issue is not None and not admin_status_issue:
             response = set_admin_permission(CONF.gitlab_base_url, self.sudo, False, CONF.default_headers)
-            print ("")
+            logging.info("")
 
     def who_closed_the_bug(self, bug_id):
         url = "{}/rest/bug/{}/history?api_key={}".format(CONF.bugzilla_base_url, bug_id, CONF.bugzilla_api_token)
@@ -414,7 +415,7 @@ class Issue:
             "state_event": "close",
         }
         who = self.who_closed_the_bug(self.bug_id)
-        print ("who closed the bug: {}".format(who))
+        logging.info("who closed the bug: {}".format(who))
         #print ("self.sudo ID: {}".format(self.sudo))
         #print ("who ID: {}".format(CONF.gitlab_users[CONF.bugzilla_users[who]]))
 
@@ -437,7 +438,7 @@ class Issue:
         # PUT /rest/bug/(id_or_alias)
 
         if CONF.dry_run:
-            print ("Bugzilla issue has been closed (DRY-RUN MODE).\n")
+            logging.info("Bugzilla issue has been closed (DRY-RUN MODE).\n")
             return
 
         # TODO: works only with CONF.gitlab_project_name (otherwise an extra look-up is required)
@@ -459,15 +460,15 @@ class Issue:
 
         #Head request to avoid 'Remote end closed connection without response' (most likely due to race-condition with "Keep-Alive" option set on server)
         response_head = _perform_request(url, "head", json=False)
-        print ("Head-Response:")
-        print (response_head)
+        logging.info("Head-Response:")
+        logging.info(response_head)
 
         response = _perform_request(url, "put", data=json_data, headers={"Content-Type": "application/json"}, json=True)
         if response.get("error"):
-            print ("Response:")
-            print (json.dumps(response, indent=4))
+            logging.error("Response:")
+            logging.error(json.dumps(response, indent=4))
         else:
-            print ("Bugzilla issue has been closed.\n")
+            logging.info("Bugzilla issue has been closed.\n")
 
 class Comment:
     """
@@ -535,9 +536,9 @@ class Comment:
             self.body += self.fix_comment(fields["thetext"])
 
         if CONF.dry_run:
-            print ("<--Comment start-->")
-            print (self.body)
-            print ("<--Comment end-->\n")
+            logging.info("<--Comment start-->")
+            logging.info(self.body)
+            logging.info("<--Comment end-->\n")
 
     def validate(self):
         for field in self.required_fields:
@@ -556,7 +557,7 @@ class Comment:
             admin_status_comment = is_admin(CONF.gitlab_base_url, self.sudo, CONF.default_headers)
 
             if admin_status_comment is not None and not admin_status_comment:
-                print ("")
+                logging.info("")
                 response = set_admin_permission(CONF.gitlab_base_url, self.sudo, True, CONF.default_headers)
 
         self.headers["sudo"] = self.sudo
@@ -570,13 +571,13 @@ class Comment:
             dry_run=CONF.dry_run,
             verify=CONF.verify,
         )
-        print("Created comment")
+        logging.info("Created comment")
 
         if not CONF.dry_run:
             #TODO: make sure this is always set, even if there is an exception
             if admin_status_comment is not None and not admin_status_comment:
                 response = set_admin_permission(CONF.gitlab_base_url, self.sudo, False, CONF.default_headers)
-                print("")
+                logging.info("")
 
 class Attachment:
     """
@@ -669,11 +670,11 @@ def _get_gitlab_user_by_email(email):
 
 def validate_user(bugzilla_user):
     if bugzilla_user not in CONF.bugzilla_users:
-        print ("Validating username {}...".format(bugzilla_user))
+        logging.info("Validating username {}...".format(bugzilla_user))
         gitlab_user = _get_gitlab_user_by_email(bugzilla_user)
 
         if gitlab_user is not None:
-            print("Found GitLab user {} for Bugzilla user {}".format(gitlab_user, bugzilla_user))
+            logging.info("Found GitLab user {} for Bugzilla user {}".format(gitlab_user, bugzilla_user))
             # add user to user_mappings.yml
             user_mappings_file = "{}/user_mappings.yml".format(CONF.config_path)
             add_user_mapping(user_mappings_file, bugzilla_user, gitlab_user)

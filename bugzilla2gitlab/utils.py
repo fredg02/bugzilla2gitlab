@@ -1,5 +1,6 @@
 from getpass import getpass
 
+import logging
 import dateutil.parser
 from defusedxml import ElementTree
 import pytz
@@ -33,7 +34,7 @@ def _perform_request(
     """
     if dry_run and method != "get":
         msg = "{} {} dry_run".format(url, method)
-        print(msg)
+        logging.info(msg)
         return 0
 
     global SESSION
@@ -96,13 +97,14 @@ def fetch_bug_list(bugzilla_url, bugzilla_api_token, product, components, status
 
     url = "{}/rest/bug?product={}{}{}&api_key={}".format(bugzilla_url, product, components_list, status_filter, bugzilla_api_token)
     response = _perform_request(url, "get", json=True)
-    print ("Found {} bugs for product={}, component={}, status={}".format(len(response["bugs"]), product, components, status))
+    print("Found {} bugs for product={}, component={}, status={}".format(len(response["bugs"]), product, components, status))
+    logging.info("Found {} bugs for product={}, component={}, status={}".format(len(response["bugs"]), product, components, status))
 
     # create link to bug list
     status_filter_link = ""
     for s in status:
       status_filter_link += "&bug_status={}".format(s)
-    print ("Bug list: {}/buglist.cgi?product={}{}{}".format(bugzilla_url, product, components_list, status_filter_link))
+    logging.info("Bug list: {}/buglist.cgi?product={}{}{}".format(bugzilla_url, product, components_list, status_filter_link))
 
     if len(response["bugs"]) > max_no_of_bugs:
         raise Exception ("Do you really want to import more than {} bugs (consider filtering by bug status!)??".format(max_no_of_bugs))
@@ -215,7 +217,7 @@ def bugzilla_login(url, user, password):
         )
         if response.cookies:
             break
-        print("Failed to log in (attempt {})".format(attempt + 1))
+        logging.error("Failed to log in (attempt {})".format(attempt + 1))
     else:
         raise Exception("Failed to log in after {} attempts".format(max_login_attempts))
 
@@ -230,9 +232,9 @@ def get_gitlab_project_id(url, ns_project_name, headers):
 
 def set_admin_permission(url, id, admin, headers):
     if admin:
-        print ("Setting temporary admin permissions for id {}.".format(id))
+        logging.info("Setting temporary admin permissions for id {}.".format(id))
     else:
-        print ("Removing temporary admin permissions for id {}.".format(id))
+        logging.info("Removing temporary admin permissions for id {}.".format(id))
     # sanitize sudo header!!
     if "sudo" in headers:
         headers.pop("sudo")
@@ -247,8 +249,8 @@ def is_admin(url, id, headers):
         #print ("is_admin: {}".format(response.get("is_admin")))
         return response["is_admin"]
     else:
-        print ("ERROR: is_admin was not found in response.")
-        print (json.dumps(response, indent=4))
+        logging.error("ERROR: is_admin was not found in response.")
+        logging.error(json.dumps(response, indent=4))
 
 def get_gitlab_user(url, id, headers):
     url = "{}/users/{}".format(url, id)
