@@ -106,10 +106,10 @@ class Issue:
 
         if fields["assigned_to"] in CONF.unassign_list:
             self.assignee_ids = ""
-            print ("Found match in unassign_list, assigning issue to no one!") 
+            print ("Found match in unassign_list, assigning issue to no one!")
         else:
             self.assignee_ids = [CONF.gitlab_users[CONF.bugzilla_users[fields["assigned_to"]]]]
-            print ("Assigning issue to {}".format(CONF.bugzilla_users[fields["assigned_to"]])) 
+            print ("Assigning issue to {}".format(CONF.bugzilla_users[fields["assigned_to"]]))
 
         self.created_at = format_utc(fields["creation_ts"])
         self.status = fields["bug_status"]
@@ -143,7 +143,7 @@ class Issue:
             component_label = CONF.component_mappings.get(component)
 
         if component_label is None:
-            if CONF.component_mapping_auto: 
+            if CONF.component_mapping_auto:
                 component_label = component
             else:
                 raise Exception("No component mapping found for '{}'".format(component))
@@ -199,9 +199,14 @@ class Issue:
                 "post",
                 headers=self.headers,
                 data={"title": milestone},
+                dry_run=CONF.dry_run,
                 verify=CONF.verify,
             )
-            CONF.gitlab_milestones[milestone] = response["id"]
+            if CONF.dry_run:
+              # assign a random number so that program can continue
+              CONF.gitlab_milestones[milestone] = 23
+            else:
+              CONF.gitlab_milestones[milestone] = response["id"]
 
         self.milestone_id = CONF.gitlab_milestones[milestone]
 
@@ -363,11 +368,12 @@ class Issue:
             print("Using original issue id")
             data["iid"] = self.bug_id
 
-        admin_status_issue = is_admin(CONF.gitlab_base_url, self.sudo, CONF.default_headers)
+        if not CONF.dry_run:
+            admin_status_issue = is_admin(CONF.gitlab_base_url, self.sudo, CONF.default_headers)
 
-        if admin_status_issue is not None and not admin_status_issue:
-            print ("")
-            response = set_admin_permission(CONF.gitlab_base_url, self.sudo, True, CONF.default_headers)
+            if admin_status_issue is not None and not admin_status_issue:
+                print ("")
+                response = set_admin_permission(CONF.gitlab_base_url, self.sudo, True, CONF.default_headers)
 
         self.headers["sudo"] = self.sudo
 
@@ -546,11 +552,12 @@ class Comment:
         )
         data = {k: v for k, v in self.__dict__.items() if k in self.data_fields}
 
-        admin_status_comment = is_admin(CONF.gitlab_base_url, self.sudo, CONF.default_headers)
+        if not CONF.dry_run:
+            admin_status_comment = is_admin(CONF.gitlab_base_url, self.sudo, CONF.default_headers)
 
-        if admin_status_comment is not None and not admin_status_comment:
-            print ("")
-            response = set_admin_permission(CONF.gitlab_base_url, self.sudo, True, CONF.default_headers)
+            if admin_status_comment is not None and not admin_status_comment:
+                print ("")
+                response = set_admin_permission(CONF.gitlab_base_url, self.sudo, True, CONF.default_headers)
 
         self.headers["sudo"] = self.sudo
 
@@ -565,10 +572,11 @@ class Comment:
         )
         print("Created comment")
 
-        #TODO: make sure this is always set, even if there is an exception
-        if admin_status_comment is not None and not admin_status_comment:
-            response = set_admin_permission(CONF.gitlab_base_url, self.sudo, False, CONF.default_headers)
-            print("")
+        if not CONF.dry_run:
+            #TODO: make sure this is always set, even if there is an exception
+            if admin_status_comment is not None and not admin_status_comment:
+                response = set_admin_permission(CONF.gitlab_base_url, self.sudo, False, CONF.default_headers)
+                print("")
 
 class Attachment:
     """
@@ -612,7 +620,7 @@ class Attachment:
         else:
             comment += "\n\n"
             if self.file_type.startswith("text"):
-                comment += ":notepad_spiral: " 
+                comment += ":notepad_spiral: "
             elif "zip" in self.file_type or "7z" in self.file_type or "rar" in self.file_type or "tar" in self.file_type:
                 comment += ":compression: "
             elif self.file_type == "application/octet-stream" and self.file_name.endswith(".zip"):
