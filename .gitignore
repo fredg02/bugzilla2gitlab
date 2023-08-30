@@ -65,3 +65,4 @@ venv/
 ENV/
 /python_tests/
 /config/
+/migration.log
