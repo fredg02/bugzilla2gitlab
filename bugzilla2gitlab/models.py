@@ -1,19 +1,21 @@
 import re, json, base64, logging
-
-from .utils import _perform_request, format_datetime, format_utc, markdown_table_row, add_user_mapping, is_admin, set_admin_permission
-from .config import _get_user_id
+import gitlab
+from .utils import _perform_request, format_datetime, format_utc, markdown_table_row, add_user_mapping, _get_gitlab_user_by_email, _get_user_id
 
 CONF = None
-
 
 class IssueThread:
     """
     Everything related to an issue in GitLab, e.g. the issue itself and subsequent comments.
     """
 
-    def __init__(self, config, fields):
+    def __init__(self, config, milestones, fields, gl, project, member_ids):
         global CONF
         CONF = config
+        self.milestones = milestones
+        self.project = project
+        self.member_ids = member_ids
+        self.gl = gl
         self.load_objects(fields)
 
     def load_objects(self, fields):
@@ -42,14 +44,14 @@ class IssueThread:
             comment0 = fields.get("long_desc")[0]
             if comment0.get("attachid"):
                 issue_attachment = self.attachments.get(comment0.get("attachid"))
-        self.issue = Issue(fields, issue_attachment)
+        self.issue = Issue(fields, self.gl, self.project, self.milestones, self.member_ids, issue_attachment)
 
         for comment_fields in fields["long_desc"]:
             if comment_fields.get("thetext"):
                 attachment = {}
                 if comment_fields.get("attachid"):
                     attachment = self.attachments.get(comment_fields.get("attachid"))
-                self.comments.append(Comment(comment_fields, attachment))
+                self.comments.append(Comment(comment_fields, self.gl, self.project, self.member_ids, attachment))
 
     def save(self):
         """
@@ -58,16 +60,18 @@ class IssueThread:
         """
         self.issue.save()
 
+        gl_issue = self.project.issues.get(self.issue.id)
+
         for comment in self.comments:
             comment.issue_id = self.issue.id
-            comment.save()
+            comment.save(gl_issue)
 
         # close the issue in GitLab, if it is resolved in Bugzilla
         if self.issue.status in CONF.bugzilla_closed_states:
             self.issue.close()
 
         # close the issue in Bugzilla
-        if CONF.close_bugzilla_bugs: # and not CONF.dry_run:
+        if CONF.close_bugzilla_bugs:
             self.issue.closeBugzilla()
 
 
@@ -88,10 +92,13 @@ class Issue:
         "confidential"
     ]
 
-    def __init__(self, bugzilla_fields, attachment=None):
+    def __init__(self, bugzilla_fields, gl, project, milestones, member_ids, attachment=None):
         self.headers = CONF.default_headers
-        validate_user(bugzilla_fields["reporter"])
-        validate_user(bugzilla_fields["assigned_to"])
+        validate_user(gl, bugzilla_fields["reporter"])
+        validate_user(gl, bugzilla_fields["assigned_to"])
+        self.project = project
+        self.milestones = milestones
+        self.member_ids = member_ids
         self.attachment = attachment
         self.load_fields(bugzilla_fields)
 
@@ -189,26 +196,16 @@ class Issue:
         """
         Looks up milestone id given its title or creates a new one.
         """
-        if milestone not in CONF.gitlab_milestones:
+        if milestone not in self.milestones:
             logging.info("Create milestone: {}".format(milestone))
-            url = "{}/projects/{}/milestones".format(
-                CONF.gitlab_base_url, CONF.gitlab_project_id
-            )
-            response = _perform_request(
-                url,
-                "post",
-                headers=self.headers,
-                data={"title": milestone},
-                dry_run=CONF.dry_run,
-                verify=CONF.verify,
-            )
             if CONF.dry_run:
               # assign a random number so that program can continue
               CONF.gitlab_milestones[milestone] = 23
             else:
-              CONF.gitlab_milestones[milestone] = response["id"]
+              gl_milestone = self.project.milestones.create({'title': milestone})
+              self.milestones[milestone] = gl_milestone.id
 
-        self.milestone_id = CONF.gitlab_milestones[milestone]
+        self.milestone_id = self.milestones[milestone]
 
     def show_related_bugs(self, fields):
         deplist = []
@@ -301,7 +298,7 @@ class Issue:
                 if comment0.get("attachid"):
                     if self.attachment:
                         if not self.attachment.is_obsolete:
-                            self.attachment.save() #upload the attachment!
+                            self.attachment.save(self.project) #upload the attachment!
                             ext_description += self.attachment.get_markdown(comment0_text)
                         else:
                             ext_description += re.sub(r"(attachment\s\d*)", "~~\\1~~ (attachment deleted)", comment0_text)
@@ -359,9 +356,6 @@ class Issue:
 
     def save(self):
         self.validate()
-        url = "{}/projects/{}/issues".format(
-            CONF.gitlab_base_url, CONF.gitlab_project_id
-        )
         data = {k: v for k, v in self.__dict__.items() if k in self.data_fields}
 
         if CONF.use_bugzilla_id is True:
@@ -369,37 +363,40 @@ class Issue:
             data["iid"] = self.bug_id
 
         if not CONF.dry_run:
-            admin_status_issue = is_admin(CONF.gitlab_base_url, self.sudo, CONF.default_headers)
+            # Add issue reporter as project member, temporarily
+            # self.sudo needs to be converted to an int to be comparable against member_ids list
+            temp_member = None
+            if int(self.sudo) not in self.member_ids:
+              try:
+                temp_member = self.project.members.create({'user_id': self.sudo, 'access_level': gitlab.const.OWNER_ACCESS})
+              except gitlab.exceptions.GitlabCreateError as e:
+                #print(e + ", id: " + str(self.sudo))
+                print("GitlabCreateError, id: " + str(self.sudo))
+            else:
+                # Give the issue reporter project owner permissions, temporarily
+                member = self.project.members.get(self.sudo)
+                orig_access_level = member.access_level
+                member.access_level = gitlab.const.OWNER_ACCESS
+                member.save()
 
-            if admin_status_issue is not None and not admin_status_issue:
-                logging.info("")
-                response = set_admin_permission(CONF.gitlab_base_url, self.sudo, True, CONF.default_headers)
+            self.gl_issue = self.project.issues.create(data)
 
-        self.headers["sudo"] = self.sudo
-
-        response = _perform_request(
-            url,
-            "post",
-            headers=self.headers,
-            data=data,
-            json=True,
-            dry_run=CONF.dry_run,
-            verify=CONF.verify,
-        )
-
-        if CONF.dry_run:
+            # Remove issue reporter as project member,
+            if temp_member is not None:
+                self.project.members.delete(self.sudo)
+            else:
+                #TODO: make sure temporary owner permission is always removed, even if there is an exception (trap?)
+                member.access_level = orig_access_level
+                member.save()
+        else:
             # assign a random number so that program can continue
+            print ("DRY-RUN: " + data)
             self.id = 5
             return
 
-        self.id = response["iid"]
-        print("Created issue with id: {}".format(self.id))
-        logging.info("Created issue with id: {}".format(self.id))
-
-        #TODO: make sure this is always set, even if there is an exception
-        if admin_status_issue is not None and not admin_status_issue:
-            response = set_admin_permission(CONF.gitlab_base_url, self.sudo, False, CONF.default_headers)
-            logging.info("")
+        self.id = self.gl_issue.iid
+        print("Created GitLab issue with id: {}, {}/{}/-/issues/{}".format(self.id, "https://gitlab.eclipse.org", CONF.gitlab_project_name, self.id))
+        logging.info("Created GitLab issue with id: {}".format(self.id))
 
     def who_closed_the_bug(self, bug_id):
         url = "{}/rest/bug/{}/history?api_key={}".format(CONF.bugzilla_base_url, bug_id, CONF.bugzilla_api_token)
@@ -408,30 +405,19 @@ class Issue:
         return last_change["who"]
 
     def close(self):
-        url = "{}/projects/{}/issues/{}".format(
-            CONF.gitlab_base_url, CONF.gitlab_project_id, self.id
-        )
-        data = {
-            "state_event": "close",
-        }
         who = self.who_closed_the_bug(self.bug_id)
         logging.info("who closed the bug: {}".format(who))
         #print ("self.sudo ID: {}".format(self.sudo))
         #print ("who ID: {}".format(CONF.gitlab_users[CONF.bugzilla_users[who]]))
 
         if who is not None:
-            self.headers["sudo"] = CONF.gitlab_users[CONF.bugzilla_users[who]]
+            close_sudo = CONF.gitlab_users[CONF.bugzilla_users[who]]
         else:
-            self.headers["sudo"] = self.sudo
+            close_sudo = self.sudo
 
-        _perform_request(
-            url,
-            "put",
-            headers=self.headers,
-            data=data,
-            dry_run=CONF.dry_run,
-            verify=CONF.verify,
-        )
+        self.gl_issue.state_event = 'close'
+        self.gl_issue.save(sudo=close_sudo)
+        #TODO: fix date and time of closing
 
     def closeBugzilla(self):
         # set status to CLOSED MOVED and post comment at the same time
@@ -476,12 +462,14 @@ class Comment:
     """
 
     required_fields = ["sudo", "body", "issue_id"]
-    data_fields = ["created_at", "body"]
+    data_fields = ["sudo", "created_at", "body"]
 
-    def __init__(self, bugzilla_fields, attachment=None):
+    def __init__(self, bugzilla_fields, gl, project, member_ids, attachment=None):
         self.headers = CONF.default_headers
         self.attachment = attachment
-        validate_user(bugzilla_fields["who"])
+        self.project = project
+        self.member_ids = member_ids
+        validate_user(gl, bugzilla_fields["who"])
         self.load_fields(bugzilla_fields)
 
     def fix_quotes(self, text):
@@ -526,7 +514,7 @@ class Comment:
         if fields.get("attachid"):
             if self.attachment:
                 if not self.attachment.is_obsolete:
-                    self.attachment.save() #upload the attachment!
+                    self.attachment.save(self.project) #upload the attachment!
                     self.body += self.attachment.get_markdown(fields["thetext"])
                 else:
                     self.body += self.fix_comment(re.sub(r"(attachment\s\d*)", "~~\\1~~ (attachment deleted)", fields["thetext"]))
@@ -546,38 +534,45 @@ class Comment:
             if not value:
                 raise Exception("Missing value for required field: {}".format(field))
 
-    def save(self):
+    def save(self, gl_issue):
         self.validate()
-        url = "{}/projects/{}/issues/{}/notes".format(
-            CONF.gitlab_base_url, CONF.gitlab_project_id, self.issue_id
-        )
         data = {k: v for k, v in self.__dict__.items() if k in self.data_fields}
 
         if not CONF.dry_run:
-            admin_status_comment = is_admin(CONF.gitlab_base_url, self.sudo, CONF.default_headers)
 
-            if admin_status_comment is not None and not admin_status_comment:
-                logging.info("")
-                response = set_admin_permission(CONF.gitlab_base_url, self.sudo, True, CONF.default_headers)
+            # Add commenter as project member, temporarily
+            # self.sudo needs to be converted to an int to be comparable against member_ids list
+            temp_member = None
+            if int(self.sudo) not in self.member_ids:
+                try:
+                  temp_member = self.project.members.create({'user_id': self.sudo, 'access_level': gitlab.const.OWNER_ACCESS})
+                except gitlab.exceptions.GitlabCreateError as e:
+                  #print(e + ", id: " + str(self.sudo))
+                  print("GitlabCreateError, id: " + str(self.sudo))
+            else:
+                # Give the issue reporter project owner permissions, temporarily
+                member = self.project.members.get(self.sudo)
+                orig_access_level = member.access_level
+                member.access_level = gitlab.const.OWNER_ACCESS
+                member.save()
 
-        self.headers["sudo"] = self.sudo
+            #TODO: check if comment has been created already and skip it
+            #print (data)
+            comment = gl_issue.notes.create(data)
 
-        _perform_request(
-            url,
-            "post",
-            headers=self.headers,
-            data=data,
-            json=True,
-            dry_run=CONF.dry_run,
-            verify=CONF.verify,
-        )
+            # Remove issue reporter as project member,
+            if temp_member is not None:
+                self.project.members.delete(self.sudo)
+            else:
+                #TODO: make sure temporary owner permission is always removed, even if there is an exception (trap?)
+                member.access_level = orig_access_level
+                member.save()
+        else:
+            print ("DRY-RUN: " + data)
+            return
+
+        print("  Created comment")
         logging.info("Created comment")
-
-        if not CONF.dry_run:
-            #TODO: make sure this is always set, even if there is an exception
-            if admin_status_comment is not None and not admin_status_comment:
-                response = set_admin_permission(CONF.gitlab_base_url, self.sudo, False, CONF.default_headers)
-                logging.info("")
 
 class Attachment:
     """
@@ -629,60 +624,39 @@ class Attachment:
             comment += u"[{}]({})".format(self.file_name, self.upload_link)
         return comment
 
-    def save(self):
-        url = "{}/projects/{}/uploads".format(CONF.gitlab_base_url, CONF.gitlab_project_id)
-
+    def save(self, project):
         if not self.file_data:
             raise Exception("Attachment data is empty!")
-        f = {"file": (self.file_name, self.file_data)}
-        attachment = _perform_request(
-            url,
-            "post",
-            headers=self.headers,
-            files=f,
-            json=True,
-            dry_run=CONF.dry_run,
-            verify=CONF.verify,
-        )
+
         # For dry run, nothing is uploaded, so upload link is faked just to let the process continue
         if CONF.dry_run:
             self.upload_link = "/dry-run/upload-link"
         else:
+            attachment = project.upload(self.file_name, filedata=self.file_data)
             self.upload_link = self.parse_upload_link(attachment)
 
-#TODO: move method to utils.py? => CONF is not defined in utils.py
-def _get_gitlab_user_by_email(email):
-    url = "{}/users?search={}".format(CONF.gitlab_base_url, email)
-    response = _perform_request(url, "get", json=True, headers=CONF.default_headers)
-    if len(response) > 1:
-        #list all usernames
-        userslist = ""
-        for user in response:
-          userslist += "{} ".format(user["username"])
-        #TODO: raising exceptions wont allow batch mode
-        raise Exception("Found more than one GitLab user for email {}: {}. Please add the right user manually.".format(email, userslist))
-    elif len(response) == 0:
-      # if no GitLab user is found, return the misc user
-      # TODO: fix this more elegantly
-      return CONF.gitlab_misc_user
-    else:
-      return response[0]["username"]
-
-def validate_user(bugzilla_user):
+def validate_user(gl, bugzilla_user):
     if bugzilla_user not in CONF.bugzilla_users:
         logging.info("Validating username {}...".format(bugzilla_user))
-        gitlab_user = _get_gitlab_user_by_email(bugzilla_user)
+        gitlab_user = _get_gitlab_user_by_email(gl, bugzilla_user)
+
+        if gitlab_user is None:
+            # if no GitLab user is found, return the bugzilla_misc_user
+            print("No matching GitLab user found for Bugzilla user `{}`. Using bugzilla_misc_user instead.".format(bugzilla_user))
+            logging.info("No matching GitLab user found for Bugzilla user `{}`. Using bugzilla_misc_user instead.".format(bugzilla_user))
+            gitlab_user = _get_gitlab_user_by_email(gl, CONF.bugzilla_misc_user)
 
         if gitlab_user is not None:
-            logging.info("Found GitLab user {} for Bugzilla user {}".format(gitlab_user, bugzilla_user))
+            logging.info("Found GitLab user {} for Bugzilla user {}".format(gitlab_user.username, bugzilla_user))
             # add user to user_mappings.yml
             user_mappings_file = "{}/user_mappings.yml".format(CONF.config_path)
-            add_user_mapping(user_mappings_file, bugzilla_user, gitlab_user)
+            add_user_mapping(user_mappings_file, bugzilla_user, gitlab_user.username)
 
             # update user mapping in memory
-            CONF.bugzilla_users[bugzilla_user] = gitlab_user
-            uid = _get_user_id(gitlab_user, CONF.gitlab_base_url, CONF.default_headers, verify=CONF.verify)
-            CONF.gitlab_users[gitlab_user] = str(uid)
+            #print ("GitLab username: " + str(gitlab_user.username))
+            CONF.bugzilla_users[bugzilla_user] = gitlab_user.username
+            #print ("GitLab user ID: " + str(gitlab_user.id))
+            CONF.gitlab_users[gitlab_user.username] = str(gitlab_user.id)
         else:
             raise Exception(
                 "No matching GitLab user found for Bugzilla user `{}` "

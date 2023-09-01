@@ -1,9 +1,10 @@
 from collections import namedtuple
 import os
+import gitlab
 
 import yaml
 
-from .utils import _perform_request, get_gitlab_project_id
+from .utils import _get_user_id, get_gitlab_project_id
 
 Config = namedtuple(
     "Config",
@@ -11,6 +12,7 @@ Config = namedtuple(
         "gitlab_base_url",
         "gitlab_project_id",
         "gitlab_project_name",
+        "gitlab_private_token",
         "bugzilla_base_url",
         "bugzilla_user",
         "bugzilla_password",
@@ -41,7 +43,6 @@ Config = namedtuple(
         "keywords_to_skip",
         "map_milestones",
         "milestones_to_skip",
-        "gitlab_milestones",
         "dry_run",
         "include_bugzilla_link",
         "include_version",
@@ -59,7 +60,7 @@ Config = namedtuple(
         "see_also_gerrit_link_base_url",
         "see_also_git_link_base_url",
         "test_mode"
-        
+
     ],
 )
 
@@ -75,17 +76,8 @@ def get_config(path):
             configuration["verify"],
         )
     )
-    if configuration["map_milestones"]:
-        configuration.update(
-            _load_milestone_id_cache(
-                configuration["gitlab_project_id"],
-                configuration["gitlab_base_url"],
-                configuration["default_headers"],
-                configuration["verify"],
-            )
-        )
     configuration.update(_load_component_mappings(path))
-    
+
     temp = {}
     temp["config_path"] = path
     configuration.update(temp)
@@ -93,7 +85,6 @@ def get_config(path):
     configuration.update(_load_unassign_list(path))
 
     return Config(**configuration)
-
 
 def _load_defaults(path):
     with open(os.path.join(path, "defaults.yml")) as f:
@@ -105,8 +96,6 @@ def _load_defaults(path):
     defaults["default_headers"] = {"private-token": config["gitlab_private_token"]}
 
     for key in config:
-        if key == "gitlab_private_token":
-            continue
         if key == "gitlab_project_id":
             if config[key] is None:
                 if config["gitlab_project_name"] is None:
@@ -132,7 +121,7 @@ def _load_user_id_cache(path, gitlab_url, gitlab_headers, verify):
     Load cache of GitLab usernames and ids
     """
     print("Loading user cache...")
-    user_mappings_file = os.path.join(path, "user_mappings.yml") 
+    user_mappings_file = os.path.join(path, "user_mappings.yml")
 
     # Create new file if it does not exist yet
     if not os.path.exists(user_mappings_file):
@@ -161,7 +150,7 @@ def _load_user_id_cache(path, gitlab_url, gitlab_headers, verify):
     return mappings
 
 def _load_unassign_list(path):
-    file = os.path.join(path, "unassign_users") 
+    file = os.path.join(path, "unassign_users")
     lines = []
     if os.path.exists(file):
         print("Loading unassign list...")
@@ -175,29 +164,19 @@ def _load_unassign_list(path):
     temp["unassign_list"] = lines
     return temp
 
-def _load_milestone_id_cache(project_id, gitlab_url, gitlab_headers, verify):
+def _load_milestone_id_cache(gl_project):
     """
     Load cache of GitLab milestones and ids
     """
     print("Loading milestone cache...")
 
     gitlab_milestones = {}
-    url = "{}/projects/{}/milestones".format(gitlab_url, project_id)
-    result = _perform_request(url, "get", headers=gitlab_headers, verify=verify)
-    if result and isinstance(result, list):
-        for milestone in result:
-            gitlab_milestones[milestone["title"]] = milestone["id"]
-
-    return {"gitlab_milestones": gitlab_milestones}
-
-
-def _get_user_id(username, gitlab_url, headers, verify):
-    url = "{}/users?username={}".format(gitlab_url, username)
-    result = _perform_request(url, "get", headers=headers, verify=verify)
-    if result and isinstance(result, list):
-        return result[0]["id"]
-    raise Exception("No gitlab account found for user {}".format(username))
-
+    gl_milestones = gl_project.milestones.list()
+    if gl_milestones and isinstance(gl_milestones, list):
+        for milestone in gl_milestones:
+            #print(milestone.title)
+            gitlab_milestones[milestone.title] = milestone.id
+    return gitlab_milestones
 
 def _load_component_mappings(path):
     with open(os.path.join(path, "component_mappings.yml")) as f:

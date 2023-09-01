@@ -229,33 +229,27 @@ def get_gitlab_project_id(url, ns_project_name, headers):
     response = _perform_request(url, "get", json=True, headers=headers)
     return response["id"]
 
+def _get_user_id(username, gitlab_url, headers, verify):
+    url = "{}/users?username={}".format(gitlab_url, username)
+    result = _perform_request(url, "get", headers=headers, verify=verify)
+    if result and isinstance(result, list):
+        return result[0]["id"]
+    raise Exception("No GitLab account found for user {}".format(username))
 
-def set_admin_permission(url, id, admin, headers):
-    if admin:
-        logging.info("Setting temporary admin permissions for id {}.".format(id))
+def _get_gitlab_user_by_email(gl, email):
+    #users = gl.users.list(email=email)
+    users = gl.users.list(search=email)
+    if len(users) > 1:
+        #list all usernames
+        userslist = ""
+        for user in users:
+          userslist += "{} ".format(user.username)
+        #TODO: raising exceptions wont allow batch mode
+        raise Exception("Found more than one GitLab user for email {}: {}. Please add the right user manually.".format(email, userslist))
+    elif len(users) == 0:
+      return None
     else:
-        logging.info("Removing temporary admin permissions for id {}.".format(id))
-    # sanitize sudo header!!
-    if "sudo" in headers:
-        headers.pop("sudo")
-    url = "{}/users/{}?admin={}".format(url, id, admin)
-    response = _perform_request(url, "put", json=True, headers=headers)
-    return response
-
-def is_admin(url, id, headers):
-    response = get_gitlab_user(url, id, headers)
-    # FIXME
-    if response.get("is_admin") is not None:
-        #print ("is_admin: {}".format(response.get("is_admin")))
-        return response["is_admin"]
-    else:
-        logging.error("ERROR: is_admin was not found in response.")
-        logging.error(json.dumps(response, indent=4))
-
-def get_gitlab_user(url, id, headers):
-    url = "{}/users/{}".format(url, id)
-    response = _perform_request(url, "get", json=True, headers=headers)
-    return response
+      return users[0]
 
 def validate_list(integer_list):
     """
