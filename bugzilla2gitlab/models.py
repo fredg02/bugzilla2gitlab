@@ -60,7 +60,11 @@ class IssueThread:
         """
         self.issue.save()
 
-        gl_issue = self.project.issues.get(self.issue.id)
+        if not CONF.dry_run:
+            gl_issue = self.project.issues.get(self.issue.id)
+        else:
+	        # assign a random issue id so that program can continue
+            gl_issue = 123
 
         for comment in self.comments:
             comment.issue_id = self.issue.id
@@ -390,7 +394,7 @@ class Issue:
                 member.save()
         else:
             # assign a random number so that program can continue
-            print ("DRY-RUN: " + data)
+            print ("DRY-RUN: " + str(data))
             self.id = 5
             return
 
@@ -568,7 +572,7 @@ class Comment:
                 member.access_level = orig_access_level
                 member.save()
         else:
-            print ("DRY-RUN: " + data)
+            print ("DRY-RUN: " + str(data))
             return
 
         print("  Created comment")
